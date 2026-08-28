@@ -72,7 +72,7 @@ Then open the dashboard at **http://localhost:8977**. Start `shikad` on a second
 
 To actually serve a model, install prima.cpp on each device (see the [prima.cpp setup guide](https://github.com/OpenCPIL/prima.cpp)), put the **same** GGUF under `~/prima.cpp/download/`, then press **Start cluster** on the dashboard (or run with `-autostart`).
 
-Point [Open WebUI](https://docs.openwebui.com) at the endpoint shown on the dashboard (`http://<head-ip>:8080/v1`) to get chat + voice.
+For a full chat **and voice** assistant, point [Open WebUI](https://docs.openwebui.com) at the endpoint shown on the dashboard — which now hands you a ready-to-run `docker run` command (with voice/Whisper setup tips) wired to the live head URL. Or just click **Open chat** for a built-in, dependency-free chat page (`/chat.html`) that talks to the mesh through `shikad` — handy on devices that can't run Open WebUI.
 
 ## Configuration
 

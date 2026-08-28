@@ -119,6 +119,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/state", s.handleState)
 	mux.HandleFunc("/api/cluster/start", s.handleStart)
 	mux.HandleFunc("/api/cluster/stop", s.handleStop)
+	mux.HandleFunc("/api/chat", s.handleChat)
+	mux.HandleFunc("/api/webui", s.handleWebUI)
 	mux.Handle("/", http.FileServer(http.FS(web.FS())))
 	return logging(mux)
 }

@@ -23,12 +23,15 @@ shikA is built in phases. Each phase is a usable milestone, not a big-bang.
 - [ ] Launch & supervise **real** prima.cpp across 2+ physical devices end-to-end
       (needs real hardware + a prima.cpp build; harness above stubs the binary)
 
-## Phase 2 — Assistant experience 🔜
+## Phase 2 — Assistant experience 🚧
 
-- [ ] Bundle/auto-configure Open WebUI against the head endpoint
-- [ ] One-click voice: wire Whisper STT + a local TTS (Kokoro/Edge) in Open WebUI
-- [ ] "Push-to-talk" and wake-word notes; latency budget for voice on small clusters
-- [ ] Optional: lightweight built-in chat page for devices that can't run Open WebUI
+- [x] Auto-configure Open WebUI against the head endpoint (dashboard shows a
+      ready-to-run `docker run` wired to the live head URL)
+- [x] Voice guidance: Whisper STT + local TTS (Kokoro/Edge) setup surfaced in the UI
+- [x] Lightweight built-in chat page (`/chat.html`) proxied to the head, for
+      devices that can't run Open WebUI
+- [ ] One-click voice bundle (ship/pre-configure Whisper+TTS rather than document it)
+- [ ] Push-to-talk / wake-word; measured latency budget on small clusters
 
 ## Phase 3 — Tailscale & remote 🔜
 

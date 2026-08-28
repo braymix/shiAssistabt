@@ -46,6 +46,14 @@
   .note{margin-top:8px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}
   .llm{margin:18px 0;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
   .llm .mono{color:var(--accent);font-size:13px;word-break:break-all}
+  .linkbtn{cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--text);
+    padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none}
+  .linkbtn:hover{border-color:var(--accent)}
+  .webui{margin-top:6px;border-top:1px solid var(--line);padding-top:6px}
+  .cmd{display:flex;gap:8px;align-items:flex-start;margin-top:6px}
+  .cmd code{flex:1;display:block;background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:9px 11px;color:var(--muted);white-space:pre-wrap;word-break:break-all}
+  .copy{padding:8px 12px;font-size:12px}
   .empty{color:var(--muted);text-align:center;padding:40px}
   a{color:var(--accent)}
   footer{color:var(--muted);font-size:12px;text-align:center;padding:26px}
@@ -61,6 +69,7 @@
   <div class="bar">
     <button class="primary" id="startBtn">Start cluster</button>
     <button class="danger" id="stopBtn">Stop</button>
+    <a class="linkbtn" href="/chat.html">Open chat →</a>
     <span class="pill" id="autostate">autostart: —</span>
     <span class="pill" id="worldpill">devices: —</span>
   </div>
@@ -68,6 +77,12 @@
   <div class="llm" id="llmBox" style="display:none">
     <div class="meta">OpenAI-compatible endpoint (point Open WebUI here):</div>
     <div class="mono" id="llmUrl">—</div>
+    <div class="webui">
+      <div class="meta" style="margin-top:12px">One-liner to run <b>Open WebUI</b> (chat + voice) against this mesh:</div>
+      <div class="cmd"><code class="mono" id="webuiCmd">—</code>
+        <button class="copy" id="copyBtn" title="copy">copy</button></div>
+      <div class="meta" id="voiceTips" style="margin-top:8px"></div>
+    </div>
   </div>
 
   <div class="grid" id="grid"></div>
@@ -142,6 +157,7 @@ async function refresh(){
     if(planResp.ok && plan.llm_url){
       $('llmBox').style.display='block';
       $('llmUrl').textContent = plan.llm_url;
+      loadWebUI();
     }
 
     if(members.length){
@@ -157,6 +173,25 @@ async function refresh(){
   }
   $('clock').textContent = new Date().toLocaleTimeString();
 }
+
+let webuiLoaded = false;
+async function loadWebUI(){
+  if(webuiLoaded) return;
+  try{
+    const info = await api('/api/webui');
+    if(info.docker){
+      $('webuiCmd').textContent = info.docker;
+      $('voiceTips').innerHTML = 'Voice: ' + (info.voice_tips||[]).map(escapeHtml).join('<br>');
+      webuiLoaded = true;
+    }
+  }catch(e){ /* head not ready yet */ }
+}
+$('copyBtn').onclick = ()=>{
+  const t = $('webuiCmd').textContent;
+  navigator.clipboard?.writeText(t);
+  $('copyBtn').textContent = 'copied';
+  setTimeout(()=>$('copyBtn').textContent='copy', 1200);
+};
 
 $('startBtn').onclick = async()=>{ await api('/api/cluster/start','POST'); refresh(); };
 $('stopBtn').onclick  = async()=>{ await api('/api/cluster/stop','POST'); refresh(); };
