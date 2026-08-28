@@ -1,0 +1,119 @@
+// Package api serves the local control API and the device-management dashboard.
+package api
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/OpenCPIL/prima-mesh/internal/cluster"
+	"github.com/OpenCPIL/prima-mesh/internal/config"
+	"github.com/OpenCPIL/prima-mesh/internal/discovery"
+	"github.com/OpenCPIL/prima-mesh/internal/supervisor"
+	"github.com/OpenCPIL/prima-mesh/web"
+)
+
+// Server wires the registry, planner and supervisor to HTTP handlers.
+type Server struct {
+	cfg config.Config
+	reg *discovery.Registry
+	sup *supervisor.Supervisor
+
+	mu        sync.RWMutex
+	autostart bool
+}
+
+// New builds a Server. autostart reflects cfg.AutoStart initially.
+func New(cfg config.Config, reg *discovery.Registry, sup *supervisor.Supervisor) *Server {
+	return &Server{cfg: cfg, reg: reg, sup: sup, autostart: cfg.AutoStart}
+}
+
+// AutoStart reports whether the operator has enabled automatic launch.
+func (s *Server) AutoStart() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.autostart
+}
+
+// Plan computes the current deterministic plan from live membership.
+func (s *Server) Plan() (cluster.Plan, bool) {
+	return cluster.Build(s.reg.Alive(), s.cfg)
+}
+
+// Handler returns the root http.Handler (API + dashboard).
+func (s *Server) Handler() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/self", s.handleSelf)
+	mux.HandleFunc("/api/peers", s.handlePeers)
+	mux.HandleFunc("/api/plan", s.handlePlan)
+	mux.HandleFunc("/api/state", s.handleState)
+	mux.HandleFunc("/api/cluster/start", s.handleStart)
+	mux.HandleFunc("/api/cluster/stop", s.handleStop)
+	mux.Handle("/", http.FileServer(http.FS(web.FS())))
+	return logging(mux)
+}
+
+func (s *Server) handleSelf(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, s.reg.Self())
+}
+
+func (s *Server) handlePeers(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, s.reg.Alive())
+}
+
+func (s *Server) handlePlan(w http.ResponseWriter, r *http.Request) {
+	plan, ok := s.Plan()
+	writeJSON(w, map[string]any{"ok": ok, "plan": plan})
+}
+
+func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]any{
+		"state":     s.sup.State(),
+		"autostart": s.AutoStart(),
+		"node":      s.reg.Self(),
+	})
+}
+
+func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		return
+	}
+	s.mu.Lock()
+	s.autostart = true
+	s.mu.Unlock()
+	if plan, ok := s.Plan(); ok {
+		s.sup.Apply(context.Background(), plan)
+	}
+	writeJSON(w, map[string]any{"ok": true, "autostart": true})
+}
+
+func (s *Server) handleStop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		return
+	}
+	s.mu.Lock()
+	s.autostart = false
+	s.mu.Unlock()
+	s.sup.Stop()
+	writeJSON(w, map[string]any{"ok": true, "autostart": false})
+}
+
+func writeJSON(w http.ResponseWriter, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	_ = enc.Encode(v)
+}
+
+func logging(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		next.ServeHTTP(w, r)
+		_ = start // hook point for real request logging later
+	})
+}

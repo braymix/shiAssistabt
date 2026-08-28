@@ -1,0 +1,23 @@
+# Binaries
+/bin/
+primeshd
+*.exe
+*.out
+/tmp/
+
+# Local config
+*.local.json
+my-node.json
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# Go
+*.test
+coverage.out

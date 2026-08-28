@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>prima-mesh — devices</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#131a22; --panel2:#182029; --line:#243040;
+    --text:#e6edf3; --muted:#8b98a5; --accent:#4cc2ff; --head:#ffcf4c;
+    --ok:#3fb950; --warn:#e3833c; --off:#5a6572;
+    --radius:14px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:18px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:19px;letter-spacing:.2px}
+  .dot{width:11px;height:11px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+  .sub{color:var(--muted);font-size:13px;font-weight:400}
+  main{max-width:1100px;margin:0 auto;padding:22px}
+  .bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+  button{cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--text);
+    padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;transition:.15s}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);color:#04121c;border-color:var(--accent)}
+  button.danger:hover{border-color:var(--warn)}
+  .pill{font-size:12px;color:var(--muted);border:1px solid var(--line);padding:6px 10px;border-radius:999px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;position:relative}
+  .card.head{border-color:var(--head)}
+  .card h3{margin:0 0 2px;font-size:16px;display:flex;align-items:center;gap:8px}
+  .badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.4px}
+  .badge.head{background:rgba(255,207,76,.15);color:var(--head);border:1px solid var(--head)}
+  .badge.worker{background:rgba(76,194,255,.12);color:var(--accent);border:1px solid #2b5b73}
+  .badge.self{background:rgba(63,185,80,.12);color:var(--ok);border:1px solid #245a2d}
+  .meta{color:var(--muted);font-size:13px;margin-top:2px}
+  .rows{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+  .row{display:flex;justify-content:space-between;font-size:13px}
+  .row b{font-weight:600}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted)}
+  .status{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px}
+  .s-dot{width:9px;height:9px;border-radius:50%;background:var(--off)}
+  .s-dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .s-dot.dry{background:var(--warn)}
+  .llm{margin:18px 0;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+  .llm .mono{color:var(--accent);font-size:13px;word-break:break-all}
+  .empty{color:var(--muted);text-align:center;padding:40px}
+  a{color:var(--accent)}
+  footer{color:var(--muted);font-size:12px;text-align:center;padding:26px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span> prima-mesh <span class="sub">device manager</span></div>
+  <div class="pill" id="clock">—</div>
+</header>
+
+<main>
+  <div class="bar">
+    <button class="primary" id="startBtn">Start cluster</button>
+    <button class="danger" id="stopBtn">Stop</button>
+    <span class="pill" id="autostate">autostart: —</span>
+    <span class="pill" id="worldpill">devices: —</span>
+  </div>
+
+  <div class="llm" id="llmBox" style="display:none">
+    <div class="meta">Ollama-compatible endpoint (point Open WebUI here):</div>
+    <div class="mono" id="llmUrl">—</div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty">Looking for devices on the network…</div>
+</main>
+
+<footer>prima-mesh · one binary per device · <span id="ver">v0.1</span></footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let selfId = null;
+
+async function api(path, method="GET"){
+  const r = await fetch(path, {method});
+  if(!r.ok) throw new Error(path+" "+r.status);
+  return r.json();
+}
+
+function fmtRAM(b){ return b ? (b/1073741824).toFixed(1)+" GB" : "?"; }
+
+function card(member, state, isSelf){
+  const info = member.info;
+  const roleBadge = member.is_head
+    ? '<span class="badge head">head</span>'
+    : '<span class="badge worker">worker · rank '+member.rank+'</span>';
+  const selfBadge = isSelf ? '<span class="badge self">this device</span>' : '';
+  let sdot = 's-dot', stxt = 'idle';
+  if(isSelf && state){
+    if(state.running){ sdot+=' on'; stxt = 'running ('+state.role+')'; }
+    else if(state.dry_run){ sdot+=' dry'; stxt = 'ready (prima.cpp not built)'; }
+  }
+  return `<div class="card ${member.is_head?'head':''}">
+    <h3>${escapeHtml(info.name||'device')} ${selfBadge}</h3>
+    <div class="meta">${roleBadge}</div>
+    <div class="rows">
+      <div class="row"><span>Platform</span><b>${info.os} / ${info.arch}</b></div>
+      <div class="row"><span>Memory</span><b>${fmtRAM(info.ram_bytes)}</b></div>
+      <div class="row"><span>Cores</span><b>${info.cores}</b></div>
+      <div class="row"><span>GPU</span><b>${info.has_gpu?'yes':'—'}</b></div>
+      <div class="row"><span>Address</span><b class="mono">${info.control||'?'}</b></div>
+    </div>
+    <div class="status"><span class="${sdot}"></span> ${stxt}</div>
+  </div>`;
+}
+
+function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function refresh(){
+  try{
+    const [state, planResp] = await Promise.all([ api('/api/state'), api('/api/plan') ]);
+    selfId = state.node.id;
+    $('autostate').textContent = 'autostart: ' + (state.autostart ? 'on' : 'off');
+
+    const plan = planResp.plan;
+    const members = (planResp.ok && plan.members) ? plan.members : [];
+    $('worldpill').textContent = 'devices: ' + members.length;
+
+    if(planResp.ok && plan.llm_url){
+      $('llmBox').style.display='block';
+      $('llmUrl').textContent = plan.llm_url;
+    }
+
+    if(members.length){
+      $('empty').style.display='none';
+      $('grid').innerHTML = members.map(m => card(m, state.state, m.info.id===selfId)).join('');
+    }else{
+      $('grid').innerHTML='';
+      $('empty').style.display='block';
+    }
+  }catch(e){
+    $('empty').style.display='block';
+    $('empty').textContent = 'Cannot reach the local orchestrator.';
+  }
+  $('clock').textContent = new Date().toLocaleTimeString();
+}
+
+$('startBtn').onclick = async()=>{ await api('/api/cluster/start','POST'); refresh(); };
+$('stopBtn').onclick  = async()=>{ await api('/api/cluster/stop','POST'); refresh(); };
+
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>
