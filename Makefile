@@ -6,7 +6,7 @@ BINDIR := bin
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo 0.1.0-dev)
 LDFLAGS := -X main.version=$(VERSION)
 
-.PHONY: all build run test check fmt vet clean cross
+.PHONY: all build run test check fmt vet clean cross dist
 
 all: build
 
@@ -41,3 +41,9 @@ cross:
 	GOOS=linux   GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(BINDIR)/$(BINARY)-linux-arm64   $(PKG)
 	GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BINDIR)/$(BINARY)-windows-amd64.exe $(PKG)
 	@echo "cross-built into $(BINDIR)/"
+
+# Release artifacts: cross binaries plus a SHA256SUMS manifest, the same set the
+# release workflow publishes.
+dist: cross
+	cd $(BINDIR) && sha256sum $(BINARY)-* > SHA256SUMS
+	@echo "dist ready in $(BINDIR)/ (binaries + SHA256SUMS)"

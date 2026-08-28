@@ -40,10 +40,17 @@ shikA is built in phases. Each phase is a usable milestone, not a big-bang.
       (`prefer_tailscale_ip` / `-prefer-tailscale-ip`)
 - [ ] Document firewall/ACL setup; test a Mac + phone-on-cellular cluster (needs real tailnet)
 
-## Phase 4 — Packaging & install 🔜
+## Phase 4 — Packaging & install 🚧
 
 **Goal: one downloadable installer per device class**, so a non-technical user
-installs shikA the way they install any app. Target artifacts:
+installs shikA the way they install any app.
+
+Shipped so far (see [`packaging/`](packaging/)): a `curl | sh` / PowerShell
+bootstrap that installs `shikad` and a background service (systemd user unit,
+launchd agent, or Windows logon task), a Termux path for Android, and a
+tag-triggered GitHub Release pipeline (`make dist` locally). The signed native
+packages below are still TODO — they need per-platform toolchains and signing
+identities:
 
 - [ ] **Android — `.apk`**: a thin APK that bundles the `shikad` arm64 binary and
       starts it as a foreground service (with a persistent notification), plus a
@@ -59,8 +66,9 @@ installs shikA the way they install any app. Target artifacts:
       **dashboard + chat/voice client** (manage the mesh, talk to the assistant) and
       contributes compute only within what iOS later allows. Set expectations here
       rather than promising a full worker.
-- [ ] Shared: `curl | sh` bootstrap per desktop platform; auto-fetch/build prima.cpp;
-      one code-signing + release pipeline in CI feeding all of the above.
+- [x] Shared: `curl | sh` / PowerShell bootstrap per desktop platform + a
+      tag-triggered CI release pipeline. (Auto-fetch/build of prima.cpp and
+      code-signing still TODO.)
 
 ## Phase 5 — Model management 🔜
 

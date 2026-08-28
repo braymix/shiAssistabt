@@ -58,6 +58,21 @@ Two planes, on purpose:
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full breakdown.
 
+## Install (prebuilt binary)
+
+One line per device — downloads `shikad` and sets it up as a background service:
+
+```bash
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/braymix/shika/main/packaging/install.sh | sh
+```
+```powershell
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/braymix/shika/main/packaging/windows/install.ps1 | iex
+```
+
+Android runs as a full worker via Termux — see [`packaging/`](packaging/) for that and for service details.
+
 ## Quick start (developer preview)
 
 Requires [Go 1.22+](https://go.dev/dl/). prima.cpp itself is optional for now — without it the orchestrator runs in **dry-run** and shows you the exact command it *would* launch.

@@ -1,0 +1,17 @@
+[Unit]
+Description=shikA distributed AI orchestrator
+Documentation=https://github.com/braymix/shika
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Installed to ~/.local/bin by packaging/install.sh; adjust if you built it
+# elsewhere. Runs as a systemd *user* service so it needs no root.
+ExecStart=%h/.local/bin/shikad
+Restart=on-failure
+RestartSec=3
+# Let it keep serving the dashboard after you log out.
+# (requires: loginctl enable-linger $USER)
+
+[Install]
+WantedBy=default.target
