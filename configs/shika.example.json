@@ -13,6 +13,9 @@
     "100.101.102.103:8977"
   ],
 
+  "tailscale": true,
+  "prefer_tailscale_ip": false,
+
   "data_port": 9000,
   "signal_port": 10000,
 

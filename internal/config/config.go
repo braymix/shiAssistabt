@@ -36,6 +36,16 @@ type Config struct {
 	// Use this for Tailscale / cross-subnet peers where multicast does not reach.
 	Seeds []string `json:"seeds"`
 
+	// Tailscale, when true, auto-detects a local tailnet and adds its online
+	// peers as seeds (additive; LAN multicast still runs). On by default —
+	// it is a no-op when tailscale isn't installed or running.
+	Tailscale bool `json:"tailscale"`
+
+	// PreferTailscaleIP advertises this node's tailnet IP as its control /
+	// prima.cpp address, for clusters whose devices aren't all on one LAN.
+	// Off by default so pure-LAN setups keep using their LAN IP.
+	PreferTailscaleIP bool `json:"prefer_tailscale_ip"`
+
 	// PrimaCPP ports (data/signal) used between prima.cpp ranks.
 	DataPort   int `json:"data_port"`
 	SignalPort int `json:"signal_port"`
@@ -52,18 +62,20 @@ func Default() Config {
 		host = "device"
 	}
 	return Config{
-		NodeName:      host,
-		Model:         "qwen2.5-3b-instruct-q4_k_m.gguf",
-		PrimaDir:      defaultPrimaDir(),
-		APIAddr:       "0.0.0.0:8977",
-		LLMPort:       8080,
-		MulticastAddr: "239.42.42.42:9977",
-		BeaconEvery:   Duration(2 * time.Second),
-		PeerTimeout:   Duration(10 * time.Second),
-		Seeds:         []string{},
-		DataPort:      9000,
-		SignalPort:    10000,
-		AutoStart:     false,
+		NodeName:          host,
+		Model:             "qwen2.5-3b-instruct-q4_k_m.gguf",
+		PrimaDir:          defaultPrimaDir(),
+		APIAddr:           "0.0.0.0:8977",
+		LLMPort:           8080,
+		MulticastAddr:     "239.42.42.42:9977",
+		BeaconEvery:       Duration(2 * time.Second),
+		PeerTimeout:       Duration(10 * time.Second),
+		Seeds:             []string{},
+		Tailscale:         true,
+		PreferTailscaleIP: false,
+		DataPort:          9000,
+		SignalPort:        10000,
+		AutoStart:         false,
 	}
 }
 

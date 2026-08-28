@@ -58,6 +58,21 @@ Two planes, on purpose:
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full breakdown.
 
+## Install (prebuilt binary)
+
+One line per device — downloads `shikad` and sets it up as a background service:
+
+```bash
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/braymix/shika/main/packaging/install.sh | sh
+```
+```powershell
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/braymix/shika/main/packaging/windows/install.ps1 | iex
+```
+
+Android runs as a full worker via Termux — see [`packaging/`](packaging/) for that and for service details.
+
 ## Quick start (developer preview)
 
 Requires [Go 1.22+](https://go.dev/dl/). prima.cpp itself is optional for now — without it the orchestrator runs in **dry-run** and shows you the exact command it *would* launch.
@@ -70,9 +85,9 @@ make run            # or: go run ./cmd/shikad
 
 Then open the dashboard at **http://localhost:8977**. Start `shikad` on a second device on the same Wi-Fi and watch it appear automatically.
 
-To actually serve a model, install prima.cpp on each device (see the [prima.cpp setup guide](https://github.com/OpenCPIL/prima.cpp)), put the **same** GGUF under `~/prima.cpp/download/`, then press **Start cluster** on the dashboard (or run with `-autostart`).
+To actually serve a model, install prima.cpp on each device (see the [prima.cpp setup guide](https://github.com/OpenCPIL/prima.cpp)), put the **same** GGUF under `~/prima.cpp/download/`, then press **Start cluster** on the dashboard (or run with `-autostart`). The dashboard's **Models** page can download & verify a GGUF for you from a curated list (with size/RAM guidance and a "fits this mesh?" check), including an uncensored option.
 
-Point [Open WebUI](https://docs.openwebui.com) at the endpoint shown on the dashboard (`http://<head-ip>:8080/v1`) to get chat + voice.
+For a full chat **and voice** assistant, point [Open WebUI](https://docs.openwebui.com) at the endpoint shown on the dashboard — which now hands you a ready-to-run `docker run` command (with voice/Whisper setup tips) wired to the live head URL. Or just click **Open chat** for a built-in, dependency-free chat page (`/chat.html`) that talks to the mesh through `shikad` — handy on devices that can't run Open WebUI.
 
 ## Configuration
 

@@ -13,31 +13,44 @@ shikA is built in phases. Each phase is a usable milestone, not a big-bang.
 - [x] Control API + embedded device-management dashboard
 - [x] Builds and runs as a single dependency-free binary
 
-## Phase 1 — Real distributed launch 🔜
+## Phase 1 — Real distributed launch 🚧
 
-- [ ] Launch & supervise real prima.cpp across 2+ devices end-to-end
-- [ ] Correct start ordering (workers up before head) coordinated via the control API
-- [ ] Health checks: is the LLM port answering? is each worker connected?
-- [ ] Restart/backoff on crash; surface errors on the dashboard
-- [ ] Integration test harness (multi-process on one host, then multi-device CI)
+- [x] Correct start ordering (workers up before head) coordinated via the control API
+- [x] Health checks: is the LLM port answering? (per-worker "connected" still TODO)
+- [x] Restart/backoff on crash; surface errors on the dashboard
+- [x] Process-group teardown so killing prima.cpp reaps its forked helpers
+- [x] Integration test harness (multi-process on one host via loopback seeds)
+- [ ] Launch & supervise **real** prima.cpp across 2+ physical devices end-to-end
+      (needs real hardware + a prima.cpp build; harness above stubs the binary)
 
-## Phase 2 — Assistant experience 🔜
+## Phase 2 — Assistant experience 🚧
 
-- [ ] Bundle/auto-configure Open WebUI against the head endpoint
-- [ ] One-click voice: wire Whisper STT + a local TTS (Kokoro/Edge) in Open WebUI
-- [ ] "Push-to-talk" and wake-word notes; latency budget for voice on small clusters
-- [ ] Optional: lightweight built-in chat page for devices that can't run Open WebUI
+- [x] Auto-configure Open WebUI against the head endpoint (dashboard shows a
+      ready-to-run `docker run` wired to the live head URL)
+- [x] Voice guidance: Whisper STT + local TTS (Kokoro/Edge) setup surfaced in the UI
+- [x] Lightweight built-in chat page (`/chat.html`) proxied to the head, for
+      devices that can't run Open WebUI
+- [ ] One-click voice bundle (ship/pre-configure Whisper+TTS rather than document it)
+- [ ] Push-to-talk / wake-word; measured latency budget on small clusters
 
-## Phase 3 — Tailscale & remote 🔜
+## Phase 3 — Tailscale & remote 🚧
 
-- [ ] Detect Tailscale (`tailscale status --json`) and auto-populate seeds
-- [ ] Prefer tailnet IPs for prima.cpp addresses when peers aren't on the same LAN
-- [ ] Document firewall/ACL setup; test a Mac + phone-on-cellular cluster
+- [x] Detect Tailscale (`tailscale status --json`) and auto-populate seeds
+- [x] Prefer tailnet IPs for prima.cpp addresses when peers aren't on the same LAN
+      (`prefer_tailscale_ip` / `-prefer-tailscale-ip`)
+- [ ] Document firewall/ACL setup; test a Mac + phone-on-cellular cluster (needs real tailnet)
 
-## Phase 4 — Packaging & install 🔜
+## Phase 4 — Packaging & install 🚧
 
 **Goal: one downloadable installer per device class**, so a non-technical user
-installs shikA the way they install any app. Target artifacts:
+installs shikA the way they install any app.
+
+Shipped so far (see [`packaging/`](packaging/)): a `curl | sh` / PowerShell
+bootstrap that installs `shikad` and a background service (systemd user unit,
+launchd agent, or Windows logon task), a Termux path for Android, and a
+tag-triggered GitHub Release pipeline (`make dist` locally). The signed native
+packages below are still TODO — they need per-platform toolchains and signing
+identities:
 
 - [ ] **Android — `.apk`**: a thin APK that bundles the `shikad` arm64 binary and
       starts it as a foreground service (with a persistent notification), plus a
@@ -53,15 +66,18 @@ installs shikA the way they install any app. Target artifacts:
       **dashboard + chat/voice client** (manage the mesh, talk to the assistant) and
       contributes compute only within what iOS later allows. Set expectations here
       rather than promising a full worker.
-- [ ] Shared: `curl | sh` bootstrap per desktop platform; auto-fetch/build prima.cpp;
-      one code-signing + release pipeline in CI feeding all of the above.
+- [x] Shared: `curl | sh` / PowerShell bootstrap per desktop platform + a
+      tag-triggered CI release pipeline. (Auto-fetch/build of prima.cpp and
+      code-signing still TODO.)
 
-## Phase 5 — Model management 🔜
+## Phase 5 — Model management 🚧
 
-- [ ] Pick, download and verify GGUF models from the dashboard
-- [ ] Curated list (including uncensored options) with size/RAM guidance
-- [ ] Per-cluster model selection; ensure every node has the same file
-- [ ] Show whether the chosen model fits the current mesh's combined memory
+- [x] Pick, download and verify (SHA256) GGUF models from the dashboard
+- [x] Curated list (including an uncensored option) with size/RAM guidance
+- [x] Show whether a model fits the current mesh's combined memory
+- [ ] Pin real SHA256s for every catalog entry (some ship unverified for now)
+- [ ] Per-cluster model selection + push a chosen model to every node so all
+      devices hold the same file (today each node downloads its own)
 
 ## Later / ideas
 

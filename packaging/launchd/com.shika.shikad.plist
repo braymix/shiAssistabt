@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  shikA launchd agent (macOS). Copy to ~/Library/LaunchAgents/ and load with:
+      launchctl load ~/Library/LaunchAgents/com.shika.shikad.plist
+  Adjust the shikad path if you did not install to /usr/local/bin.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.shika.shikad</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/shikad</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/tmp/shikad.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/shikad.err.log</string>
+</dict>
+</plist>

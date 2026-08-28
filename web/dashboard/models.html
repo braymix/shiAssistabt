@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>shikA — models</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#131a22; --panel2:#182029; --line:#243040;
+    --text:#e6edf3; --muted:#8b98a5; --accent:#4cc2ff; --ok:#3fb950; --warn:#e3833c; --off:#5a6572;
+    --radius:14px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text)}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:14px 20px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+  a{color:var(--accent);text-decoration:none;font-size:14px}
+  main{max-width:900px;margin:0 auto;padding:22px}
+  .meshbar{color:var(--muted);font-size:14px;margin-bottom:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+  .card.current{border-color:var(--accent)}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  h3{margin:0 0 4px;font-size:16px}
+  .notes{color:var(--muted);font-size:13px;margin-top:4px}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .tag{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+  .tag.fit{color:var(--ok);border-color:#245a2d}
+  .tag.nofit{color:var(--warn);border-color:#6b4a26}
+  .tag.unc{color:var(--warn);border-color:#6b4a26}
+  .tag.cur{color:var(--accent);border-color:#2b5b73}
+  .tag.inst{color:var(--ok);border-color:#245a2d}
+  button{cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:#04121c;
+    padding:9px 15px;border-radius:10px;font-size:13px;font-weight:700;white-space:nowrap}
+  button:disabled{opacity:.5;cursor:default;background:var(--panel2);color:var(--muted);border-color:var(--line)}
+  .bar{height:7px;background:var(--panel2);border-radius:5px;overflow:hidden;margin-top:12px}
+  .bar > span{display:block;height:100%;background:var(--accent);width:0}
+  .prog{font-size:12px;color:var(--muted);margin-top:6px}
+  .err{color:var(--warn)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span>🧠</span> shikA <span style="color:var(--muted);font-weight:400">models</span></div>
+  <a href="/">← device manager</a>
+</header>
+<main>
+  <div class="meshbar" id="meshbar">Combined mesh memory: —</div>
+  <div id="list"></div>
+</main>
+<script>
+const $ = (id)=>document.getElementById(id);
+function gb(b){ return (b/1073741824).toFixed(b < 1073741824 ? 2 : 1)+" GB"; }
+function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+async function refresh(){
+  let data;
+  try{ data = await (await fetch('/api/models')).json(); }
+  catch(e){ return; }
+  $('meshbar').textContent = 'Combined mesh memory: ' + data.mesh_ram_gb.toFixed(1) + ' GB'
+    + '  ·  current model: ' + esc(data.current);
+
+  $('list').innerHTML = data.models.map(m => {
+    const isCur = m.file === data.current;
+    const p = m.progress;
+    const downloading = p && p.active;
+    const pct = (p && p.total>0) ? Math.round(100*p.done/p.total) : 0;
+
+    let btn;
+    if(m.installed){ btn = '<button disabled>installed</button>'; }
+    else if(downloading){ btn = '<button disabled>downloading…</button>'; }
+    else { btn = `<button onclick="dl('${m.id}')">Download</button>`; }
+
+    const tags = [];
+    if(isCur) tags.push('<span class="tag cur">current</span>');
+    if(m.installed) tags.push('<span class="tag inst">on disk</span>');
+    tags.push(`<span class="tag ${m.fits?'fit':'nofit'}">${m.fits?'fits mesh':'needs '+m.min_ram_gb+'GB'}</span>`);
+    tags.push(`<span class="tag">~${gb(m.size_bytes)}</span>`);
+    tags.push(`<span class="tag">${m.verified?'verified ✓':'unverified'}</span>`);
+    if(m.uncensored) tags.push('<span class="tag unc">uncensored</span>');
+
+    let progHtml = '';
+    if(p && (downloading || p.error || (p.completed && !m.installed))){
+      if(p.error){ progHtml = `<div class="prog err">error: ${esc(p.error)}</div>`; }
+      else {
+        progHtml = `<div class="bar"><span style="width:${pct}%"></span></div>
+          <div class="prog">${gb(p.done||0)}${p.total>0?' / '+gb(p.total):''} (${pct}%)</div>`;
+      }
+    }
+
+    return `<div class="card ${isCur?'current':''}">
+      <div class="top">
+        <div>
+          <h3>${esc(m.name)}</h3>
+          <div class="notes">${esc(m.notes||'')}</div>
+        </div>
+        ${btn}
+      </div>
+      <div class="tags">${tags.join('')}</div>
+      ${progHtml}
+    </div>`;
+  }).join('');
+}
+
+async function dl(id){
+  try{ await fetch('/api/models/download?id='+encodeURIComponent(id), {method:'POST'}); }
+  catch(e){}
+  refresh();
+}
+window.dl = dl;
+
+refresh();
+setInterval(refresh, 1000);
+</script>
+</body>
+</html>
