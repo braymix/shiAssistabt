@@ -1,4 +1,4 @@
-// Package discovery finds other prima-mesh nodes on the network.
+// Package discovery finds other shikA nodes on the network.
 //
 // Two mechanisms:
 //   - LAN: UDP multicast beacons (zero-config, works on the same Wi-Fi/subnet).
@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OpenCPIL/prima-mesh/internal/node"
+	"github.com/braymix/shika/internal/node"
 )
 
 // Peer is a known node plus liveness bookkeeping.

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OpenCPIL/prima-mesh/internal/cluster"
+	"github.com/braymix/shika/internal/cluster"
 )
 
 // State is a snapshot of what the supervisor is doing, for the API/dashboard.

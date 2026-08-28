@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OpenCPIL/prima-mesh/internal/cluster"
-	"github.com/OpenCPIL/prima-mesh/internal/config"
-	"github.com/OpenCPIL/prima-mesh/internal/discovery"
-	"github.com/OpenCPIL/prima-mesh/internal/supervisor"
-	"github.com/OpenCPIL/prima-mesh/web"
+	"github.com/braymix/shika/internal/cluster"
+	"github.com/braymix/shika/internal/config"
+	"github.com/braymix/shika/internal/discovery"
+	"github.com/braymix/shika/internal/supervisor"
+	"github.com/braymix/shika/web"
 )
 
 // Server wires the registry, planner and supervisor to HTTP handlers.

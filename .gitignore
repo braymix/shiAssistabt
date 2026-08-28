@@ -1,6 +1,7 @@
 # Binaries
 /bin/
-primeshd
+# Stray root-level build output only — anchored so it does not match cmd/shikad/.
+/shikad
 *.exe
 *.out
 /tmp/
