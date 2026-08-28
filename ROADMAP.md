@@ -15,12 +15,13 @@ shikA is built in phases. Each phase is a usable milestone, not a big-bang.
 
 ## Phase 1 — Real distributed launch 🚧
 
-- [ ] Launch & supervise real prima.cpp across 2+ devices end-to-end
 - [x] Correct start ordering (workers up before head) coordinated via the control API
 - [x] Health checks: is the LLM port answering? (per-worker "connected" still TODO)
 - [x] Restart/backoff on crash; surface errors on the dashboard
 - [x] Process-group teardown so killing prima.cpp reaps its forked helpers
-- [ ] Integration test harness (multi-process on one host, then multi-device CI)
+- [x] Integration test harness (multi-process on one host via loopback seeds)
+- [ ] Launch & supervise **real** prima.cpp across 2+ physical devices end-to-end
+      (needs real hardware + a prima.cpp build; harness above stubs the binary)
 
 ## Phase 2 — Assistant experience 🔜
 
