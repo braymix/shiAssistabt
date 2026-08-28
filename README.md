@@ -85,7 +85,7 @@ make run            # or: go run ./cmd/shikad
 
 Then open the dashboard at **http://localhost:8977**. Start `shikad` on a second device on the same Wi-Fi and watch it appear automatically.
 
-To actually serve a model, install prima.cpp on each device (see the [prima.cpp setup guide](https://github.com/OpenCPIL/prima.cpp)), put the **same** GGUF under `~/prima.cpp/download/`, then press **Start cluster** on the dashboard (or run with `-autostart`).
+To actually serve a model, install prima.cpp on each device (see the [prima.cpp setup guide](https://github.com/OpenCPIL/prima.cpp)), put the **same** GGUF under `~/prima.cpp/download/`, then press **Start cluster** on the dashboard (or run with `-autostart`). The dashboard's **Models** page can download & verify a GGUF for you from a curated list (with size/RAM guidance and a "fits this mesh?" check), including an uncensored option.
 
 For a full chat **and voice** assistant, point [Open WebUI](https://docs.openwebui.com) at the endpoint shown on the dashboard — which now hands you a ready-to-run `docker run` command (with voice/Whisper setup tips) wired to the live head URL. Or just click **Open chat** for a built-in, dependency-free chat page (`/chat.html`) that talks to the mesh through `shikad` — handy on devices that can't run Open WebUI.
 

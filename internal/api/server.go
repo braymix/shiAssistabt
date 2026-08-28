@@ -11,6 +11,7 @@ import (
 	"github.com/braymix/shika/internal/cluster"
 	"github.com/braymix/shika/internal/config"
 	"github.com/braymix/shika/internal/discovery"
+	"github.com/braymix/shika/internal/models"
 	"github.com/braymix/shika/internal/supervisor"
 	"github.com/braymix/shika/web"
 )
@@ -24,6 +25,7 @@ type Server struct {
 	cfg config.Config
 	reg *discovery.Registry
 	sup *supervisor.Supervisor
+	mdl *models.Manager
 
 	mu        sync.RWMutex
 	autostart bool
@@ -31,7 +33,23 @@ type Server struct {
 
 // New builds a Server. autostart reflects cfg.AutoStart initially.
 func New(cfg config.Config, reg *discovery.Registry, sup *supervisor.Supervisor) *Server {
-	return &Server{cfg: cfg, reg: reg, sup: sup, autostart: cfg.AutoStart}
+	return &Server{
+		cfg:       cfg,
+		reg:       reg,
+		sup:       sup,
+		mdl:       models.NewManager(cfg.PrimaDir),
+		autostart: cfg.AutoStart,
+	}
+}
+
+// meshRAMGB is the combined memory of all alive nodes, used to tell the operator
+// whether a model fits the current mesh.
+func (s *Server) meshRAMGB() float64 {
+	var bytes uint64
+	for _, p := range s.reg.Alive() {
+		bytes += p.RAMBytes
+	}
+	return float64(bytes) / (1 << 30)
 }
 
 // AutoStart reports whether the operator has enabled automatic launch.
@@ -121,6 +139,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/cluster/stop", s.handleStop)
 	mux.HandleFunc("/api/chat", s.handleChat)
 	mux.HandleFunc("/api/webui", s.handleWebUI)
+	mux.HandleFunc("/api/models", s.handleModels)
+	mux.HandleFunc("/api/models/download", s.handleModelDownload)
 	mux.Handle("/", http.FileServer(http.FS(web.FS())))
 	return logging(mux)
 }

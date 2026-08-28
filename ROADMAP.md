@@ -70,12 +70,14 @@ identities:
       tag-triggered CI release pipeline. (Auto-fetch/build of prima.cpp and
       code-signing still TODO.)
 
-## Phase 5 — Model management 🔜
+## Phase 5 — Model management 🚧
 
-- [ ] Pick, download and verify GGUF models from the dashboard
-- [ ] Curated list (including uncensored options) with size/RAM guidance
-- [ ] Per-cluster model selection; ensure every node has the same file
-- [ ] Show whether the chosen model fits the current mesh's combined memory
+- [x] Pick, download and verify (SHA256) GGUF models from the dashboard
+- [x] Curated list (including an uncensored option) with size/RAM guidance
+- [x] Show whether a model fits the current mesh's combined memory
+- [ ] Pin real SHA256s for every catalog entry (some ship unverified for now)
+- [ ] Per-cluster model selection + push a chosen model to every node so all
+      devices hold the same file (today each node downloads its own)
 
 ## Later / ideas
 
