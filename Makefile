@@ -1,7 +1,7 @@
-# prima-mesh Makefile
+# shikA Makefile
 
-BINARY := primeshd
-PKG := ./cmd/primeshd
+BINARY := shikad
+PKG := ./cmd/shikad
 BINDIR := bin
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo 0.1.0-dev)
 LDFLAGS := -X main.version=$(VERSION)

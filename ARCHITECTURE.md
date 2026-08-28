@@ -1,11 +1,11 @@
 # Architecture
 
-prima-mesh has two planes that stay strictly separated.
+shikA has two planes that stay strictly separated.
 
-- **Control plane** — `primeshd`, the Go daemon in this repo. It decides *what should run where*. It never does inference.
-- **Data plane** — [prima.cpp](https://github.com/OpenCPIL/prima.cpp). It does the actual distributed inference. prima-mesh treats it as a managed child process.
+- **Control plane** — `shikad`, the Go daemon in this repo. It decides *what should run where*. It never does inference.
+- **Data plane** — [prima.cpp](https://github.com/OpenCPIL/prima.cpp). It does the actual distributed inference. shikA treats it as a managed child process.
 
-Keeping these apart means prima-mesh can evolve (better discovery, a nicer dashboard, Tailscale, model management) without touching the C++ inference engine, and can track upstream prima.cpp without merge pain.
+Keeping these apart means shikA can evolve (better discovery, a nicer dashboard, Tailscale, model management) without touching the C++ inference engine, and can track upstream prima.cpp without merge pain.
 
 ## Design principles
 
@@ -17,7 +17,7 @@ Keeping these apart means prima-mesh can evolve (better discovery, a nicer dashb
 ## Packages
 
 ```
-cmd/primeshd            entrypoint: wires everything together, signal handling
+cmd/shikad            entrypoint: wires everything together, signal handling
 internal/config         JSON config + defaults
 internal/node           this device's identity + hardware detection (RAM, cores, GPU, OS)
 internal/discovery      UDP-multicast LAN discovery, HTTP seed polling, membership registry
@@ -54,7 +54,7 @@ A full consensus protocol (Raft/gossip-with-leader) is the "correct" answer for 
 
 ## Data plane handoff
 
-The head's plan yields an OpenAI-compatible base URL (`http://<head-ip>:<llm_port>/v1`). [Open WebUI](https://openwebui.com) points at it for chat and voice; any OpenAI-compatible client can too. prima-mesh's job ends at producing and supervising that endpoint.
+The head's plan yields an OpenAI-compatible base URL (`http://<head-ip>:<llm_port>/v1`). [Open WebUI](https://openwebui.com) points at it for chat and voice; any OpenAI-compatible client can too. shikA's job ends at producing and supervising that endpoint.
 
 ## Known limitations of the current scaffold
 

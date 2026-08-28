@@ -1,4 +1,4 @@
-// Package config loads and holds prima-mesh runtime configuration.
+// Package config loads and holds shikA runtime configuration.
 package config
 
 import (
@@ -40,7 +40,7 @@ type Config struct {
 	DataPort   int `json:"data_port"`
 	SignalPort int `json:"signal_port"`
 
-	// AutoStart, when true, lets primeshd launch prima.cpp automatically once a
+	// AutoStart, when true, lets shikad launch prima.cpp automatically once a
 	// stable plan is reached. Off by default so nothing runs unexpectedly.
 	AutoStart bool `json:"auto_start"`
 }

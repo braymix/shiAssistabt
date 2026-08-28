@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OpenCPIL/prima-mesh/internal/config"
-	"github.com/OpenCPIL/prima-mesh/internal/discovery"
-	"github.com/OpenCPIL/prima-mesh/internal/node"
+	"github.com/braymix/shika/internal/config"
+	"github.com/braymix/shika/internal/discovery"
+	"github.com/braymix/shika/internal/node"
 )
 
 func peer(id, name, control string, ramGB float64, cores int) discovery.Peer {

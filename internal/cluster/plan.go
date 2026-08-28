@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/OpenCPIL/prima-mesh/internal/config"
-	"github.com/OpenCPIL/prima-mesh/internal/discovery"
-	"github.com/OpenCPIL/prima-mesh/internal/node"
+	"github.com/braymix/shika/internal/config"
+	"github.com/braymix/shika/internal/discovery"
+	"github.com/braymix/shika/internal/node"
 )
 
 // Member is one node's assigned role within a plan.

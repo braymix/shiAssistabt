@@ -1,6 +1,6 @@
 # Roadmap
 
-prima-mesh is built in phases. Each phase is a usable milestone, not a big-bang.
+shikA is built in phases. Each phase is a usable milestone, not a big-bang.
 
 ## Phase 0 — Orchestrator skeleton ✅ (v0.1, this repo)
 
@@ -36,10 +36,25 @@ prima-mesh is built in phases. Each phase is a usable milestone, not a big-bang.
 
 ## Phase 4 — Packaging & install 🔜
 
-- [ ] macOS: signed `.app` / launchd agent + menubar status
-- [ ] Android: Termux package + Termux:Widget one-tap, or a thin APK wrapper
-- [ ] Windows: service + tray icon
-- [ ] `curl | sh` installers per platform; auto-fetch/build prima.cpp
+**Goal: one downloadable installer per device class**, so a non-technical user
+installs shikA the way they install any app. Target artifacts:
+
+- [ ] **Android — `.apk`**: a thin APK that bundles the `shikad` arm64 binary and
+      starts it as a foreground service (with a persistent notification), plus a
+      Termux path for power users. This is a full worker node.
+- [ ] **Windows — `.exe`**: an installer (`.exe`/MSI) that registers `shikad` as a
+      Windows service with a tray icon. Full worker node.
+- [ ] **macOS (MacBook) — `.app`**: a signed/notarized `.app` + launchd agent with a
+      menubar status item. Full worker/head node.
+- [ ] **Linux (incl. Linux Mint) — `.deb` / AppImage**: a `.deb` (Mint/Ubuntu) and a
+      portable AppImage, installing a systemd user service. Full worker/head node.
+- [ ] **iPad — iOS app (client-first)**: an App Store / TestFlight app. iOS forbids the
+      long-running background compute a worker needs, so the iPad ships first as a
+      **dashboard + chat/voice client** (manage the mesh, talk to the assistant) and
+      contributes compute only within what iOS later allows. Set expectations here
+      rather than promising a full worker.
+- [ ] Shared: `curl | sh` bootstrap per desktop platform; auto-fetch/build prima.cpp;
+      one code-signing + release pipeline in CI feeding all of the above.
 
 ## Phase 5 — Model management 🔜
 

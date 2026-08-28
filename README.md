@@ -1,6 +1,6 @@
 <div align="center">
 
-# prima-mesh
+# shikA
 
 **Turn every device you own into one shared, private AI.**
 
@@ -16,7 +16,7 @@ Install one small app on each device. On the same Wi-Fi (or over [Tailscale](htt
 
 Tools like [Ollama](https://ollama.com) run a model on **one** machine. [prima.cpp](https://github.com/OpenCPIL/prima.cpp) can split a model across **several** machines, but wiring it up by hand (IP addresses, ranks, ring order, ports, one launch command per device) is fiddly and static.
 
-**prima-mesh is the missing layer on top.** A single background service — `primeshd` — runs on each device and does the boring parts for you:
+**shikA is the missing layer on top.** A single background service — `shikad` — runs on each device and does the boring parts for you:
 
 - **Finds devices automatically.** Zero-config discovery on the LAN, plus seed addresses for [Tailscale](https://tailscale.com)/remote peers.
 - **Plans the cluster.** Picks the strongest device as the head, assigns ranks, builds the ring — the *same* result on every node, no central server.
@@ -31,14 +31,14 @@ You bring the model — including an **uncensored** one if you want (it's just a
 ```mermaid
 flowchart TB
   subgraph Mac["🖥️ MacBook (head / rank 0)"]
-    D0[primeshd] --> S0[prima.cpp<br/>llama-server :8080]
+    D0[shikad] --> S0[prima.cpp<br/>llama-server :8080]
     OWUI[Open WebUI<br/>chat + voice]
   end
   subgraph Phone["📱 Android (worker / rank 1)"]
-    D1[primeshd] --> S1[prima.cpp<br/>llama-cli]
+    D1[shikad] --> S1[prima.cpp<br/>llama-cli]
   end
   subgraph PC["💻 Other device (worker / rank 2)"]
-    D2[primeshd] --> S2[prima.cpp<br/>llama-cli]
+    D2[shikad] --> S2[prima.cpp<br/>llama-cli]
   end
 
   D0 <-. auto-discovery .-> D1
@@ -53,8 +53,8 @@ flowchart TB
 
 Two planes, on purpose:
 
-- **Control plane — prima-mesh (this repo, Go).** Discovery, membership, planning, supervision, dashboard. One dependency-free binary per device.
-- **Data plane — prima.cpp (C++).** The actual distributed model inference. prima-mesh launches and configures it; it does not reimplement it.
+- **Control plane — shikA (this repo, Go).** Discovery, membership, planning, supervision, dashboard. One dependency-free binary per device.
+- **Data plane — prima.cpp (C++).** The actual distributed model inference. shikA launches and configures it; it does not reimplement it.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full breakdown.
 
@@ -63,12 +63,12 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full breakdown.
 Requires [Go 1.22+](https://go.dev/dl/). prima.cpp itself is optional for now — without it the orchestrator runs in **dry-run** and shows you the exact command it *would* launch.
 
 ```bash
-git clone https://github.com/OpenCPIL/prima-mesh.git
-cd prima-mesh
-make run            # or: go run ./cmd/primeshd
+git clone https://github.com/braymix/shika.git
+cd shikA
+make run            # or: go run ./cmd/shikad
 ```
 
-Then open the dashboard at **http://localhost:8977**. Start `primeshd` on a second device on the same Wi-Fi and watch it appear automatically.
+Then open the dashboard at **http://localhost:8977**. Start `shikad` on a second device on the same Wi-Fi and watch it appear automatically.
 
 To actually serve a model, install prima.cpp on each device (see the [prima.cpp setup guide](https://github.com/OpenCPIL/prima.cpp)), put the **same** GGUF under `~/prima.cpp/download/`, then press **Start cluster** on the dashboard (or run with `-autostart`).
 
@@ -76,10 +76,10 @@ Point [Open WebUI](https://docs.openwebui.com) at the endpoint shown on the dash
 
 ## Configuration
 
-`primeshd` runs with sane defaults and no config file. To customise, copy [`configs/prima-mesh.example.json`](configs/prima-mesh.example.json) and pass it with `-config`:
+`shikad` runs with sane defaults and no config file. To customise, copy [`configs/shika.example.json`](configs/shika.example.json) and pass it with `-config`:
 
 ```bash
-primeshd -config my-node.json -name "living-room-pc"
+shikad -config my-node.json -name "living-room-pc"
 ```
 
 Key fields: `model` (the GGUF filename), `seeds` (Tailscale/remote peer control addresses), `llm_port`, and the prima.cpp `data_port` / `signal_port`. Full list in the example file.
@@ -99,7 +99,7 @@ Full detail in [ROADMAP.md](ROADMAP.md).
 
 ## A note on models & responsibility
 
-prima-mesh is model-agnostic: it runs whatever GGUF you point it at, censored or not, on **your own hardware, on your own network**. Choosing and running a model — and using its output lawfully and responsibly — is up to you. The project ships no model and endorses no particular one.
+shikA is model-agnostic: it runs whatever GGUF you point it at, censored or not, on **your own hardware, on your own network**. Choosing and running a model — and using its output lawfully and responsibly — is up to you. The project ships no model and endorses no particular one.
 
 ## Built on
 
