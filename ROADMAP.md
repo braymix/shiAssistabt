@@ -33,11 +33,12 @@ shikA is built in phases. Each phase is a usable milestone, not a big-bang.
 - [ ] One-click voice bundle (ship/pre-configure Whisper+TTS rather than document it)
 - [ ] Push-to-talk / wake-word; measured latency budget on small clusters
 
-## Phase 3 — Tailscale & remote 🔜
+## Phase 3 — Tailscale & remote 🚧
 
-- [ ] Detect Tailscale (`tailscale status --json`) and auto-populate seeds
-- [ ] Prefer tailnet IPs for prima.cpp addresses when peers aren't on the same LAN
-- [ ] Document firewall/ACL setup; test a Mac + phone-on-cellular cluster
+- [x] Detect Tailscale (`tailscale status --json`) and auto-populate seeds
+- [x] Prefer tailnet IPs for prima.cpp addresses when peers aren't on the same LAN
+      (`prefer_tailscale_ip` / `-prefer-tailscale-ip`)
+- [ ] Document firewall/ACL setup; test a Mac + phone-on-cellular cluster (needs real tailnet)
 
 ## Phase 4 — Packaging & install 🔜
 

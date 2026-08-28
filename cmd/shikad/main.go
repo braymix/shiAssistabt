@@ -25,6 +25,7 @@ import (
 	"github.com/braymix/shika/internal/discovery"
 	"github.com/braymix/shika/internal/node"
 	"github.com/braymix/shika/internal/supervisor"
+	"github.com/braymix/shika/internal/tailscale"
 )
 
 // version is overridden at build time via -ldflags "-X main.version=...".
@@ -39,6 +40,8 @@ func main() {
 		name        = flag.String("name", "", "override this device's friendly name")
 		addr        = flag.String("addr", "", "override the control API listen address (host:port)")
 		autostart   = flag.Bool("autostart", false, "launch prima.cpp automatically once a plan is reached")
+		noTailscale = flag.Bool("no-tailscale", false, "disable Tailscale peer auto-discovery")
+		preferTS    = flag.Bool("prefer-tailscale-ip", false, "advertise the tailnet IP as this node's address")
 		showVersion = flag.Bool("version", false, "print version and exit")
 	)
 	flag.Parse()
@@ -62,13 +65,40 @@ func main() {
 	if *autostart {
 		cfg.AutoStart = true
 	}
+	if *noTailscale {
+		cfg.Tailscale = false
+	}
+	if *preferTS {
+		cfg.PreferTailscaleIP = true
+	}
 
 	// cfg.APIAddr may be a wildcard like "0.0.0.0:8977", which is useless to
 	// advertise to peers. Advertise a concrete, routable host:port instead so
 	// seed discovery and prima.cpp addressing work.
-	control := node.OutboundIP()
-	if port := node.PortOf(cfg.APIAddr); port > 0 {
-		control = net.JoinHostPort(control, strconv.Itoa(port))
+	port := node.PortOf(cfg.APIAddr)
+	controlIP := node.OutboundIP()
+
+	// Tailscale: fold online tailnet peers into the seed list (additive — LAN
+	// multicast still runs) and, if asked, advertise the tailnet IP so peers
+	// that aren't on this LAN can still reach us and prima.cpp.
+	if cfg.Tailscale {
+		if info, ok := tailscale.Detect(nil); ok {
+			if cfg.PreferTailscaleIP && info.SelfIP != "" {
+				controlIP = info.SelfIP
+			}
+			if seeds := tailscale.Seeds(info, port); len(seeds) > 0 {
+				cfg.Seeds = mergeSeeds(cfg.Seeds, seeds)
+				log.Printf("tailscale: %d online peer(s) added as seeds", len(seeds))
+			}
+			if info.SelfIP != "" {
+				log.Printf("tailscale: this node's tailnet IP is %s", info.SelfIP)
+			}
+		}
+	}
+
+	control := controlIP
+	if port > 0 {
+		control = net.JoinHostPort(controlIP, strconv.Itoa(port))
 	}
 
 	self := node.Detect(cfg.NodeName, control, cfg.LLMPort)
@@ -122,6 +152,21 @@ func main() {
 		log.Fatalf("http server: %v", err)
 	}
 	log.Printf("stopped")
+}
+
+// mergeSeeds appends extra seeds to base, skipping duplicates, preserving order.
+func mergeSeeds(base, extra []string) []string {
+	seen := make(map[string]bool, len(base))
+	for _, s := range base {
+		seen[s] = true
+	}
+	for _, s := range extra {
+		if !seen[s] {
+			base = append(base, s)
+			seen[s] = true
+		}
+	}
+	return base
 }
 
 // reconcile periodically applies the current plan while autostart is enabled.
