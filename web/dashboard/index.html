@@ -43,6 +43,7 @@
   .s-dot{width:9px;height:9px;border-radius:50%;background:var(--off)}
   .s-dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
   .s-dot.dry{background:var(--warn)}
+  .note{margin-top:8px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}
   .llm{margin:18px 0;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
   .llm .mono{color:var(--accent);font-size:13px;word-break:break-all}
   .empty{color:var(--muted);text-align:center;padding:40px}
@@ -93,10 +94,23 @@ function card(member, state, isSelf){
     ? '<span class="badge head">head</span>'
     : '<span class="badge worker">worker · rank '+member.rank+'</span>';
   const selfBadge = isSelf ? '<span class="badge self">this device</span>' : '';
-  let sdot = 's-dot', stxt = 'idle';
+  let sdot = 's-dot', stxt = 'idle', extra = '';
   if(isSelf && state){
-    if(state.running){ sdot+=' on'; stxt = 'running ('+state.role+')'; }
+    if(state.waiting){ sdot+=' dry'; stxt = 'waiting for workers…'; }
+    else if(state.running){
+      sdot+=' on'; stxt = 'running ('+state.role+')';
+      if(member.is_head && state.health){
+        stxt += state.health.ok ? ' · LLM ready'
+              : ' · LLM ' + escapeHtml(state.health.detail || 'not ready');
+      }
+    }
     else if(state.dry_run){ sdot+=' dry'; stxt = 'ready (prima.cpp not built)'; }
+
+    const bits = [];
+    if(state.restarts){ bits.push(state.restarts + ' restart' + (state.restarts>1?'s':'')); }
+    if(state.last_exit){ bits.push('last exit: ' + escapeHtml(state.last_exit)); }
+    if(state.last_error){ bits.push('error: ' + escapeHtml(state.last_error)); }
+    if(bits.length){ extra = '<div class="note">'+bits.join(' · ')+'</div>'; }
   }
   return `<div class="card ${member.is_head?'head':''}">
     <h3>${escapeHtml(info.name||'device')} ${selfBadge}</h3>
@@ -109,6 +123,7 @@ function card(member, state, isSelf){
       <div class="row"><span>Address</span><b class="mono">${info.control||'?'}</b></div>
     </div>
     <div class="status"><span class="${sdot}"></span> ${stxt}</div>
+    ${extra}
   </div>`;
 }
 

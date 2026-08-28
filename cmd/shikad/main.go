@@ -79,6 +79,10 @@ func main() {
 	sup := supervisor.New(cfg.PrimaDir, self.ID)
 	srv := api.New(cfg, reg, sup)
 
+	// Start ordering: the head holds until its workers' prima.cpp processes are
+	// up, coordinated over the control API. Workers are never gated.
+	sup.SetReadiness(srv.WorkersReady)
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
