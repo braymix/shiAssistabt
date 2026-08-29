@@ -15,7 +15,12 @@ name: Android Release
 on:
   push:
     tags: [ 'v*' ]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Existing release tag to attach the signed APK to (manual runs)."
+        required: true
+        default: v0.1.0
 
 permissions:
   contents: write
@@ -91,13 +96,19 @@ jobs:
           if-no-files-found: error
 
       - name: Attach APK to the release
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -eu
-          TAG="${GITHUB_REF_NAME}"
-          # The desktop release workflow creates the release; wait for it.
+          # Tag push -> the pushed tag; manual run -> the release input (attaches
+          # the APK to an already-published release, e.g. v0.1.0).
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.release }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          # On a tag push the desktop release workflow creates the release; wait.
           for _ in $(seq 1 30); do
             if gh release view "$TAG" >/dev/null 2>&1; then break; fi
             echo "waiting for release $TAG ..."
@@ -106,3 +117,4 @@ jobs:
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --generate-notes
           cp "$APK" "shikA-${TAG}.apk"
           gh release upload "$TAG" "shikA-${TAG}.apk" --clobber
+          echo "Attached shikA-${TAG}.apk to release $TAG"
