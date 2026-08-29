@@ -42,11 +42,33 @@ the dashboard of every other shikA device on the same Wi-Fi.
 For remote phones (mobile data), run shikA on your other devices with Tailscale
 and add the phone's tailnet address as a seed — see the repo README.
 
-## Signing & Play Store
+## Signed APK from CI (recommended)
 
-`assembleRelease` produces an **unsigned** APK. Sign it with your own keystore
-(`apksigner`) for sideloading, or wire a signing config for a Play Store build.
-A signed release pipeline is Phase 4 roadmap work.
+Pushing a `vX.Y.Z` tag runs [`.github/workflows/android-release.yml`](../.github/workflows/android-release.yml),
+which builds the APK and — when signing secrets are set — signs it and attaches
+`shikA-vX.Y.Z.apk` to that tag's GitHub Release. (It's always uploaded as a
+workflow **artifact** too, signed or not.)
+
+Add these repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | What |
+|--------|------|
+| `ANDROID_KEYSTORE_BASE64` | your keystore, base64-encoded: `base64 -w0 my.keystore` |
+| `ANDROID_KEYSTORE_PASSWORD` | store password |
+| `ANDROID_KEY_ALIAS` | key alias |
+| `ANDROID_KEY_PASSWORD` | key password |
+
+Create a keystore once with:
+
+```bash
+keytool -genkey -v -keystore shika-release.keystore \
+  -alias shika -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Without the secrets the workflow still builds an **unsigned** APK (downloadable
+as the artifact) but won't publish it to the Release. Locally, `./gradlew
+assembleRelease` likewise produces an unsigned APK unless you pass the same
+`-PRELEASE_STORE_FILE=…` properties.
 
 ## Not arm64?
 

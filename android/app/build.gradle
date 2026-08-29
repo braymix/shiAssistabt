@@ -3,9 +3,25 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// Release signing is driven by -P properties (set by CI from repository
+// secrets). When they're absent — a plain local build — the release APK is
+// simply left unsigned, so `./gradlew assembleRelease` still works with no setup.
+def releaseStoreFile = project.findProperty('RELEASE_STORE_FILE')
+
 android {
     namespace 'com.shika.app'
     compileSdk 34
+
+    signingConfigs {
+        if (releaseStoreFile) {
+            create('release') {
+                storeFile file(releaseStoreFile)
+                storePassword project.findProperty('RELEASE_STORE_PASSWORD')
+                keyAlias project.findProperty('RELEASE_KEY_ALIAS')
+                keyPassword project.findProperty('RELEASE_KEY_PASSWORD')
+            }
+        }
+    }
 
     defaultConfig {
         applicationId "com.shika.app"
@@ -30,6 +46,9 @@ android {
     buildTypes {
         release {
             minifyEnabled false
+            if (releaseStoreFile) {
+                signingConfig signingConfigs.getByName('release')
+            }
         }
     }
     compileOptions {

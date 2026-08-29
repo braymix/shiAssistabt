@@ -50,7 +50,8 @@ shikA launches them.
 The scripts above cover every desktop today, and the Android APK builds from
 `android/`. The roadmap's signed, one-click packages are not automated yet:
 
-- **Android `.apk`** — buildable now; a **signed** CI release is still TODO.
+- **Android `.apk`** — built + signed by CI on every tag once keystore secrets
+  are set (see [`android/README.md`](../android/README.md)).
 - **Windows `.exe`/MSI** — a real installer registering a system service + tray icon.
 - **macOS `.app`** — signed/notarized bundle + menubar item.
 - **Linux `.deb` / AppImage** — for Mint/Ubuntu and portable use.

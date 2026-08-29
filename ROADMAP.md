@@ -56,8 +56,9 @@ identities:
       `shikad` arm64 binary (built NDK-free via `GOOS=android`, `make android`) and
       runs it as a foreground service with a persistent notification, CPU wakelock,
       and multicast lock; a WebView shows the dashboard. Full worker node. Termux
-      path also documented. *TODO: a signed release build in CI (today it's
-      build-your-own / unsigned).*
+      path also documented. A CI workflow builds the APK on every tag and signs +
+      publishes it once keystore secrets are added (else it ships as an unsigned
+      artifact).
 - [ ] **Windows — `.exe`**: an installer (`.exe`/MSI) that registers `shikad` as a
       Windows service with a tray icon. Full worker node.
 - [ ] **macOS (MacBook) — `.app`**: a signed/notarized `.app` + launchd agent with a
