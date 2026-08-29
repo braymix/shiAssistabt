@@ -1,0 +1,88 @@
+name: Engine Build
+
+# Cross-builds the prima.cpp inference engine for each desktop platform and
+# attaches shika-engine-<platform>.zip to the release, which the app downloads
+# on first Start. (Android's engine is bundled inside the APK by
+# android-release.yml, so it is not built here.)
+#
+# These are third-party C++ builds and may need per-platform tweaks; each matrix
+# leg is independent (fail-fast: false) so a platform that builds still ships.
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Existing release tag to attach the engine bundles to."
+        required: true
+        default: v0.1.0
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,  platform: linux-amd64 }
+          - { os: macos-14,       platform: darwin-arm64 }
+          - { os: macos-13,       platform: darwin-amd64 }
+          - { os: windows-latest, platform: windows-amd64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone prima.cpp
+        run: git clone --depth 1 https://github.com/OpenCPIL/prima.cpp prima
+
+      - name: Configure & build (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd prima
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF -DGGML_OPENMP=OFF
+          cmake --build build --config Release -j 4
+
+      - name: Configure & build (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cd prima
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF
+          cmake --build build --config Release -j 4
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: bash scripts/package-engine.sh prima "${{ matrix.platform }}"
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/package-engine.ps1 prima "${{ matrix.platform }}"
+
+      - name: Upload engine bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shika-engine-${{ matrix.platform }}
+          path: shika-engine-${{ matrix.platform }}.zip
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.release }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          for _ in $(seq 1 30); do
+            if gh release view "$TAG" >/dev/null 2>&1; then break; fi
+            echo "waiting for release $TAG ..."; sleep 5
+          done
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --generate-notes
+          gh release upload "$TAG" "shika-engine-${{ matrix.platform }}.zip" --clobber
