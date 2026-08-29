@@ -49,7 +49,7 @@ jobs:
       - name: Build native orchestrator binary (libshikad.so)
         run: make android VERSION="${GITHUB_REF_NAME:-dev}"
 
-      - name: Build APK
+      - name: Build (and sign) APK
         working-directory: android
         env:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -58,20 +58,30 @@ jobs:
           KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -eu
+          KS="$RUNNER_TEMP/shika.keystore"
           if [ -n "${KS_B64:-}" ]; then
-            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/shika.keystore"
-            gradle assembleRelease \
-              -PRELEASE_STORE_FILE="$RUNNER_TEMP/shika.keystore" \
-              -PRELEASE_STORE_PASSWORD="$KS_PASS" \
-              -PRELEASE_KEY_ALIAS="$KEY_ALIAS" \
-              -PRELEASE_KEY_PASSWORD="$KEY_PASS"
-            echo "APK=android/app/build/outputs/apk/release/app-release.apk" >> "$GITHUB_ENV"
-            echo "SIGNED=1" >> "$GITHUB_ENV"
+            # Your own stable key (recommended for updatable installs / Play Store).
+            echo "$KS_B64" | base64 -d > "$KS"
+            STOREPASS="$KS_PASS"; ALIAS="$KEY_ALIAS"; KEYPASS="$KEY_PASS"
           else
-            echo "No signing secrets set — building an unsigned APK (won't be uploaded)."
-            gradle assembleRelease
-            echo "SIGNED=0" >> "$GITHUB_ENV"
+            # No secrets set: generate a throwaway key so the APK is still signed
+            # and installable with zero setup. keytool ships with the JDK, so you
+            # never have to run it yourself. (Because the key changes each build,
+            # updating an installed app means uninstall-first; set the
+            # ANDROID_KEYSTORE_* secrets once for a stable key.)
+            echo "::notice::No signing secrets found — signing with an auto-generated throwaway key."
+            STOREPASS="shika-dev"; ALIAS="shika"; KEYPASS="shika-dev"
+            keytool -genkeypair -v -keystore "$KS" -alias "$ALIAS" \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$STOREPASS" -keypass "$KEYPASS" \
+              -dname "CN=shikA, OU=shikA, O=shikA, C=US"
           fi
+          gradle assembleRelease \
+            -PRELEASE_STORE_FILE="$KS" \
+            -PRELEASE_STORE_PASSWORD="$STOREPASS" \
+            -PRELEASE_KEY_ALIAS="$ALIAS" \
+            -PRELEASE_KEY_PASSWORD="$KEYPASS"
+          echo "APK=android/app/build/outputs/apk/release/app-release.apk" >> "$GITHUB_ENV"
 
       - name: Upload APK as a workflow artifact
         uses: actions/upload-artifact@v4
@@ -80,8 +90,8 @@ jobs:
           path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
-      - name: Attach signed APK to the release
-        if: ${{ env.SIGNED == '1' && startsWith(github.ref, 'refs/tags/') }}
+      - name: Attach APK to the release
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

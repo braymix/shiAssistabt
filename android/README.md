@@ -42,14 +42,21 @@ the dashboard of every other shikA device on the same Wi-Fi.
 For remote phones (mobile data), run shikA on your other devices with Tailscale
 and add the phone's tailnet address as a seed — see the repo README.
 
-## Signed APK from CI (recommended)
+## Signed APK from CI — no setup needed
 
-Pushing a `vX.Y.Z` tag runs [`.github/workflows/android-release.yml`](../.github/workflows/android-release.yml),
-which builds the APK and — when signing secrets are set — signs it and attaches
-`shikA-vX.Y.Z.apk` to that tag's GitHub Release. (It's always uploaded as a
-workflow **artifact** too, signed or not.)
+Push a `vX.Y.Z` tag and [`.github/workflows/android-release.yml`](../.github/workflows/android-release.yml)
+builds a **signed, installable** `shikA-vX.Y.Z.apk`, attaches it to that tag's
+GitHub Release, and also uploads it as a workflow **artifact**. You don't run
+`keytool` or set anything — if no signing secrets exist, CI generates a
+throwaway key automatically (keytool ships with the JDK on the runner).
 
-Add these repository secrets (Settings → Secrets and variables → Actions):
+That's enough for sideloading. The only catch: a throwaway key changes each
+build, so **updating** an already-installed shikA means uninstalling it first.
+
+### Optional: a stable key (so updates install over the top)
+
+Set these repository secrets (Settings → Secrets and variables → Actions) once
+and CI uses them instead:
 
 | Secret | What |
 |--------|------|
@@ -58,17 +65,11 @@ Add these repository secrets (Settings → Secrets and variables → Actions):
 | `ANDROID_KEY_ALIAS` | key alias |
 | `ANDROID_KEY_PASSWORD` | key password |
 
-Create a keystore once with:
+Make one with `keytool -genkey -v -keystore shika-release.keystore -alias shika
+-keyalg RSA -keysize 2048 -validity 10000` — but this is entirely optional.
 
-```bash
-keytool -genkey -v -keystore shika-release.keystore \
-  -alias shika -keyalg RSA -keysize 2048 -validity 10000
-```
-
-Without the secrets the workflow still builds an **unsigned** APK (downloadable
-as the artifact) but won't publish it to the Release. Locally, `./gradlew
-assembleRelease` likewise produces an unsigned APK unless you pass the same
-`-PRELEASE_STORE_FILE=…` properties.
+Locally, `./gradlew assembleRelease` builds an unsigned APK unless you pass the
+same `-PRELEASE_STORE_FILE=…` properties.
 
 ## Not arm64?
 
