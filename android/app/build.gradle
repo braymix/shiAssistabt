@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.shika.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.shika.app"
+        minSdk 26          // Android 8.0 — foreground services + adaptive behaviour
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
+        // We only ship the arm64 orchestrator binary (covers essentially all
+        // modern phones). Add other ABIs here if you cross-build them.
+        ndk { abiFilters 'arm64-v8a' }
+    }
+
+    // shikad is shipped as libshikad.so under jniLibs. useLegacyPackaging keeps
+    // it uncompressed *on disk* in the install, so the service can exec it from
+    // nativeLibraryDir (Android blocks exec from app-writable dirs).
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging true
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+}

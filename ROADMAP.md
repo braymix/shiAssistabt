@@ -52,9 +52,12 @@ tag-triggered GitHub Release pipeline (`make dist` locally). The signed native
 packages below are still TODO — they need per-platform toolchains and signing
 identities:
 
-- [ ] **Android — `.apk`**: a thin APK that bundles the `shikad` arm64 binary and
-      starts it as a foreground service (with a persistent notification), plus a
-      Termux path for power users. This is a full worker node.
+- [x] **Android — `.apk`**: a thin APK (in [`android/`](android/)) that bundles the
+      `shikad` arm64 binary (built NDK-free via `GOOS=android`, `make android`) and
+      runs it as a foreground service with a persistent notification, CPU wakelock,
+      and multicast lock; a WebView shows the dashboard. Full worker node. Termux
+      path also documented. *TODO: a signed release build in CI (today it's
+      build-your-own / unsigned).*
 - [ ] **Windows — `.exe`**: an installer (`.exe`/MSI) that registers `shikad` as a
       Windows service with a tray icon. Full worker node.
 - [ ] **macOS (MacBook) — `.app`**: a signed/notarized `.app` + launchd agent with a
@@ -66,9 +69,9 @@ identities:
       **dashboard + chat/voice client** (manage the mesh, talk to the assistant) and
       contributes compute only within what iOS later allows. Set expectations here
       rather than promising a full worker.
-- [x] Shared: `curl | sh` / PowerShell bootstrap per desktop platform + a
-      tag-triggered CI release pipeline. (Auto-fetch/build of prima.cpp and
-      code-signing still TODO.)
+- [x] Shared: `curl | sh` / PowerShell bootstrap per desktop platform, a
+      tag-triggered CI release pipeline, and `make prima` to auto-fetch/build
+      prima.cpp. (Code-signing still TODO.)
 
 ## Phase 5 — Model management 🚧
 
