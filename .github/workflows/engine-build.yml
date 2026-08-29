@@ -38,6 +38,14 @@ jobs:
       - name: Clone prima.cpp
         run: git clone --depth 1 https://github.com/OpenCPIL/prima.cpp prima
 
+      # prima.cpp dropped common/cmake/build-info-gen-cpp.cmake from its repo,
+      # which breaks the build; restore our replacement before compiling.
+      - name: Restore build-info generator
+        shell: bash
+        run: |
+          mkdir -p prima/common/cmake
+          cp scripts/build-info-gen-cpp.cmake prima/common/cmake/build-info-gen-cpp.cmake
+
       - name: Configure & build (Unix)
         if: runner.os != 'Windows'
         run: |

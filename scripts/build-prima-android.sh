@@ -16,6 +16,7 @@ PRIMA_REPO="${PRIMA_REPO:-https://github.com/OpenCPIL/prima.cpp}"
 ABI="${ANDROID_ABI:-arm64-v8a}"
 API="${ANDROID_API:-26}"
 WORK="${WORK:-$(mktemp -d)}"
+REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 
 say() { printf '\033[36mprima-android\033[0m %s\n' "$*"; }
 die() { printf '\033[31mprima-android error:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -30,6 +31,10 @@ if [ ! -d "$WORK/prima.cpp/.git" ]; then
   git clone --depth 1 "$PRIMA_REPO" "$WORK/prima.cpp"
 fi
 cd "$WORK/prima.cpp"
+
+# prima.cpp dropped its build-info generator; restore ours so cmake can build.
+mkdir -p common/cmake
+cp "$REPO_ROOT/scripts/build-info-gen-cpp.cmake" common/cmake/build-info-gen-cpp.cmake
 
 say "configuring (NDK $ABI, android-$API)"
 cmake -B build-android \

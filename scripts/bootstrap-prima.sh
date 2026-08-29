@@ -13,6 +13,7 @@ set -eu
 
 PRIMA_DIR="${PRIMA_DIR:-$HOME/prima.cpp}"
 PRIMA_REPO="${PRIMA_REPO:-https://github.com/OpenCPIL/prima.cpp}"
+REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 
 say() { printf '\033[36mprima\033[0m %s\n' "$*"; }
 die() { printf '\033[31mprima error:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -30,6 +31,9 @@ fi
 
 # 2. build (prefer cmake, fall back to make)
 cd "$PRIMA_DIR"
+# prima.cpp dropped its build-info generator; restore ours so the build works.
+mkdir -p common/cmake
+cp "$REPO_ROOT/scripts/build-info-gen-cpp.cmake" common/cmake/build-info-gen-cpp.cmake 2>/dev/null || true
 if command -v cmake >/dev/null 2>&1; then
   say "building with cmake"
   cmake -B build -DCMAKE_BUILD_TYPE=Release
