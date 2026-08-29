@@ -43,7 +43,20 @@ func NewRegistry(self node.Info, timeout time.Duration) *Registry {
 }
 
 // Self returns this node's Info.
-func (r *Registry) Self() node.Info { return r.self }
+func (r *Registry) Self() node.Info {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.self
+}
+
+// SetSelfModel updates the GGUF filename this node advertises. Beacons pick the
+// new value up on their next tick, so a head's model choice propagates to the
+// mesh without a restart.
+func (r *Registry) SetSelfModel(model string) {
+	r.mu.Lock()
+	r.self.Model = model
+	r.mu.Unlock()
+}
 
 func (r *Registry) upsert(info node.Info, source string) {
 	if info.ID == "" || info.ID == r.self.ID {

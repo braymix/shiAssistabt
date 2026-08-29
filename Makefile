@@ -6,7 +6,7 @@ BINDIR := bin
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo 0.1.0-dev)
 LDFLAGS := -X main.version=$(VERSION)
 
-.PHONY: all build run test check fmt vet clean cross dist
+.PHONY: all build run test check fmt vet clean cross dist android prima
 
 all: build
 
@@ -47,3 +47,16 @@ cross:
 dist: cross
 	cd $(BINDIR) && sha256sum $(BINARY)-* > SHA256SUMS
 	@echo "dist ready in $(BINDIR)/ (binaries + SHA256SUMS)"
+
+# Android: build the orchestrator as a native, NDK-free arm64 executable and drop
+# it where the APK expects it (as libshikad.so). Build the APK from android/.
+ANDROID_JNI := android/app/src/main/jniLibs/arm64-v8a
+android:
+	@mkdir -p $(ANDROID_JNI)
+	CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(ANDROID_JNI)/libshikad.so $(PKG)
+	@echo "android binary -> $(ANDROID_JNI)/libshikad.so"
+	@echo "now: cd android && ./gradlew assembleRelease"
+
+# Fetch & build prima.cpp (the data plane) into ~/prima.cpp.
+prima:
+	sh scripts/bootstrap-prima.sh

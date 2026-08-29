@@ -141,6 +141,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/webui", s.handleWebUI)
 	mux.HandleFunc("/api/models", s.handleModels)
 	mux.HandleFunc("/api/models/download", s.handleModelDownload)
+	mux.HandleFunc("/api/models/select", s.handleModelSelect)
 	mux.Handle("/", http.FileServer(http.FS(web.FS())))
 	return logging(mux)
 }

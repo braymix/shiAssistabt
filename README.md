@@ -71,7 +71,7 @@ curl -fsSL https://raw.githubusercontent.com/braymix/shika/main/packaging/instal
 irm https://raw.githubusercontent.com/braymix/shika/main/packaging/windows/install.ps1 | iex
 ```
 
-Android runs as a full worker via Termux — see [`packaging/`](packaging/) for that and for service details.
+**Android** runs as a full worker node either via the native APK in [`android/`](android/) (`make android` → `./gradlew assembleRelease`) or via Termux — see [`packaging/`](packaging/) for details.
 
 ## Quick start (developer preview)
 

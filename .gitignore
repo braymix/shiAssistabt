@@ -22,3 +22,10 @@ Thumbs.db
 # Go
 *.test
 coverage.out
+
+# Android build artifacts (the bundled binary is produced by `make android`)
+*.so
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties

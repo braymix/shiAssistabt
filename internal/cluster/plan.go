@@ -27,6 +27,7 @@ type Plan struct {
 	World   int      `json:"world"`
 	HeadID  string   `json:"head_id"`
 	HeadIP  string   `json:"head_ip"`
+	Model   string   `json:"model"`   // GGUF filename every node runs (chosen by the head)
 	LLMURL  string   `json:"llm_url"` // OpenAI-compatible base URL to feed Open WebUI
 	Members []Member `json:"members"`
 }
@@ -53,6 +54,14 @@ func Build(peers []discovery.Peer, cfg config.Config) (Plan, bool) {
 	head := peers[0]
 	headIP := hostOf(head.Control)
 
+	// The model is a cluster-wide choice made by the head and advertised in its
+	// beacon, so every node builds the same commands. Fall back to this node's
+	// configured default until the head advertises one.
+	model := head.Model
+	if model == "" {
+		model = cfg.Model
+	}
+
 	members := make([]Member, world)
 	for i := range peers {
 		ip := hostOf(peers[i].Control)
@@ -66,13 +75,14 @@ func Build(peers []discovery.Peer, cfg config.Config) (Plan, bool) {
 		}
 	}
 	for i := range members {
-		members[i].Command = buildCommand(members[i], headIP, world, cfg)
+		members[i].Command = buildCommand(members[i], headIP, world, model, cfg)
 	}
 
 	return Plan{
 		World:   world,
 		HeadID:  head.ID,
 		HeadIP:  headIP,
+		Model:   model,
 		LLMURL:  fmt.Sprintf("http://%s:%d/v1", headIP, head.LLMPort),
 		Members: members,
 	}, true
@@ -80,8 +90,8 @@ func Build(peers []discovery.Peer, cfg config.Config) (Plan, bool) {
 
 // buildCommand assembles the prima.cpp argv for a member. The head runs
 // llama-server (persistent OpenAI API + web UI); workers run llama-cli.
-func buildCommand(m Member, headIP string, world int, cfg config.Config) []string {
-	model := "download/" + cfg.Model
+func buildCommand(m Member, headIP string, world int, modelFile string, cfg config.Config) []string {
+	model := "download/" + modelFile
 	common := []string{
 		"--world", itoa(world),
 		"--rank", itoa(m.Rank),

@@ -29,12 +29,29 @@ Release. `install.sh` pulls from `releases/latest` by default.
 
 Build the same artifacts locally with `make dist`.
 
+## Android
+
+Two ways to make a phone a full worker node:
+
+- **Native APK** — [`android/`](../android/) bundles `shikad` (built NDK-free via
+  `make android`) and runs it as a foreground service. Build with
+  `cd android && ./gradlew assembleRelease`, then sideload. This is the
+  no-Termux path.
+- **Termux** — [`termux/`](termux/) for power users who prefer a shell.
+
+## prima.cpp (data plane)
+
+`sh scripts/bootstrap-prima.sh` (or `make prima`) clones and builds prima.cpp
+into `~/prima.cpp` and links the `llama-server` / `llama-cli` binaries where
+shikA launches them.
+
 ## Native installers — still TODO (Phase 4)
 
-The scripts above cover every desktop today. The roadmap's signed, one-click
-native packages are not built here yet:
+The scripts above cover every desktop today, and the Android APK builds from
+`android/`. The roadmap's signed, one-click packages are not automated yet:
 
-- **Android `.apk`** — bundle `shikad` arm64 as a foreground service.
+- **Android `.apk`** — built + signed by CI on every tag once keystore secrets
+  are set (see [`android/README.md`](../android/README.md)).
 - **Windows `.exe`/MSI** — a real installer registering a system service + tray icon.
 - **macOS `.app`** — signed/notarized bundle + menubar item.
 - **Linux `.deb` / AppImage** — for Mint/Ubuntu and portable use.

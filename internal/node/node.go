@@ -14,15 +14,16 @@ import (
 // Info is the self-description a node advertises to the mesh. It is small and
 // JSON-friendly so it can be gossiped in a single UDP beacon.
 type Info struct {
-	ID       string `json:"id"`        // stable random id for this process/device
-	Name     string `json:"name"`      // friendly name
-	OS       string `json:"os"`        // linux, darwin, windows, android...
-	Arch     string `json:"arch"`      // arm64, amd64...
-	Cores    int    `json:"cores"`     // logical CPUs
-	RAMBytes uint64 `json:"ram_bytes"` // total physical RAM
-	HasGPU   bool   `json:"has_gpu"`   // best-effort GPU presence hint
-	Control  string `json:"control"`   // host:port of this node's control API
-	LLMPort  int    `json:"llm_port"`  // OpenAI port used if this node is head
+	ID       string `json:"id"`              // stable random id for this process/device
+	Name     string `json:"name"`            // friendly name
+	OS       string `json:"os"`              // linux, darwin, windows, android...
+	Arch     string `json:"arch"`            // arm64, amd64...
+	Cores    int    `json:"cores"`           // logical CPUs
+	RAMBytes uint64 `json:"ram_bytes"`       // total physical RAM
+	HasGPU   bool   `json:"has_gpu"`         // best-effort GPU presence hint
+	Control  string `json:"control"`         // host:port of this node's control API
+	LLMPort  int    `json:"llm_port"`        // OpenAI port used if this node is head
+	Model    string `json:"model,omitempty"` // GGUF filename this node wants to run
 }
 
 // RAMGB is a convenience for display.

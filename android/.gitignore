@@ -1,0 +1,10 @@
+# Gradle / Android Studio
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+
+# The bundled orchestrator binary is a build artifact produced by `make android`.
+app/src/main/jniLibs/**/*.so
