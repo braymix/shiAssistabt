@@ -5,8 +5,17 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 )
+
+// exe is the executable suffix for this OS ("" everywhere but Windows).
+func exe() string {
+	if runtime.GOOS == "windows" {
+		return ".exe"
+	}
+	return ""
+}
 
 // Config is the full node configuration. It is intentionally small: most of
 // the interesting behaviour (who becomes head, the ring order) is decided at
@@ -86,9 +95,9 @@ func Default() Config {
 		NodeName:          host,
 		Model:             "qwen2.5-3b-instruct-q4_k_m.gguf",
 		PrimaDir:          defaultPrimaDir(),
-		ServerBin:         "./llama-server",
-		CliBin:            "./llama-cli",
-		RpcBin:            "./rpc-server",
+		ServerBin:         "./llama-server" + exe(),
+		CliBin:            "./llama-cli" + exe(),
+		RpcBin:            "./rpc-server" + exe(),
 		RpcPort:           50052,
 		ModelDir:          "download",
 		APIAddr:           "0.0.0.0:8977",
