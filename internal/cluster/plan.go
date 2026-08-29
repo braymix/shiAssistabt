@@ -1,11 +1,15 @@
 // Package cluster turns the set of alive peers into a concrete, deterministic
-// prima.cpp launch plan (who is head, the ring order, and each node's command).
+// llama.cpp launch plan: who is head (runs llama-server), and — when there is
+// more than one device — which workers run rpc-server so the head can spread the
+// model across all of them (llama.cpp's RPC "shared power").
 package cluster
 
 import (
 	"fmt"
+	"net"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/braymix/shika/internal/config"
 	"github.com/braymix/shika/internal/discovery"
@@ -15,11 +19,10 @@ import (
 // Member is one node's assigned role within a plan.
 type Member struct {
 	Info    node.Info `json:"info"`
-	Rank    int       `json:"rank"`    // 0 == head
-	IP      string    `json:"ip"`      // control host, used as prima.cpp address
-	NextIP  string    `json:"next_ip"` // ring: address of the next rank
+	Rank    int       `json:"rank"` // 0 == head
+	IP      string    `json:"ip"`   // this node's address
 	IsHead  bool      `json:"is_head"`
-	Command []string  `json:"command"` // prima.cpp argv this node should run
+	Command []string  `json:"command"` // engine argv this node should run
 }
 
 // Plan is the full cluster assignment, identical on every node because it is a
@@ -65,18 +68,24 @@ func Build(peers []discovery.Peer, cfg config.Config) (Plan, bool) {
 
 	members := make([]Member, world)
 	for i := range peers {
-		ip := hostOf(peers[i].Control)
-		nextIP := hostOf(peers[(i+1)%world].Control)
 		members[i] = Member{
 			Info:   peers[i].Info,
 			Rank:   i,
-			IP:     ip,
-			NextIP: nextIP,
+			IP:     hostOf(peers[i].Control),
 			IsHead: i == 0,
 		}
 	}
+
+	// Workers expose an rpc-server the head offloads model layers to. Collect
+	// their endpoints for the head's --rpc list.
+	rpcPort := cfg.RpcPort
+	workerRPCs := make([]string, 0, world-1)
+	for i := 1; i < world; i++ {
+		workerRPCs = append(workerRPCs, net.JoinHostPort(members[i].IP, itoa(rpcPort)))
+	}
+
 	for i := range members {
-		members[i].Command = buildCommand(members[i], headIP, world, model, cfg)
+		members[i].Command = buildCommand(members[i], model, cfg, workerRPCs)
 	}
 
 	return Plan{
@@ -89,29 +98,24 @@ func Build(peers []discovery.Peer, cfg config.Config) (Plan, bool) {
 	}, true
 }
 
-// buildCommand assembles the prima.cpp argv for a member. The head runs
-// llama-server (persistent OpenAI API + web UI); workers run llama-cli.
-func buildCommand(m Member, headIP string, world int, modelFile string, cfg config.Config) []string {
-	model := modelPath(cfg.ModelDir, modelFile)
-	common := []string{
-		"--world", itoa(world),
-		"--rank", itoa(m.Rank),
-		"--master", headIP,
-		"--next", m.NextIP,
-		"--data-port", itoa(cfg.DataPort),
-		"--signal-port", itoa(cfg.SignalPort),
-		"--prefetch",
-	}
+// buildCommand assembles the llama.cpp argv for a member. The head runs
+// llama-server (the OpenAI-compatible endpoint) and loads the model; with more
+// than one device it offloads layers to the workers over RPC. Each worker runs
+// rpc-server and needs no model file of its own.
+func buildCommand(m Member, modelFile string, cfg config.Config, workerRPCs []string) []string {
 	if m.IsHead {
 		argv := []string{
-			cfg.ServerBin, "-m", model,
+			cfg.ServerBin, "-m", modelPath(cfg.ModelDir, modelFile),
 			"--host", "0.0.0.0", "--port", itoa(m.Info.LLMPort),
-			"-c", "2048",
+			"-c", "4096",
 		}
-		return append(argv, common...)
+		if len(workerRPCs) > 0 {
+			argv = append(argv, "--rpc", strings.Join(workerRPCs, ","))
+		}
+		return argv
 	}
-	argv := []string{cfg.CliBin, "-m", model}
-	return append(argv, common...)
+	// Worker: a compute/memory node for the head's RPC.
+	return []string{cfg.RpcBin, "-H", "0.0.0.0", "-p", itoa(cfg.RpcPort)}
 }
 
 // modelPath resolves the -m argument. An absolute ModelDir is used verbatim

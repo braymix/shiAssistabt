@@ -29,6 +29,12 @@ type Config struct {
 	ServerBin string `json:"server_bin"`
 	CliBin    string `json:"cli_bin"`
 
+	// RpcBin is llama.cpp's rpc-server, run on worker nodes so the head can
+	// offload model layers to them (the "shared power" across devices). RpcPort
+	// is the port each worker's rpc-server listens on.
+	RpcBin  string `json:"rpc_bin"`
+	RpcPort int    `json:"rpc_port"`
+
 	// ModelDir is where GGUF files live. Relative paths are resolved against
 	// PrimaDir (prima.cpp's own layout); an absolute path is used as-is, which
 	// Android needs since it must store models in writable app storage rather
@@ -82,6 +88,8 @@ func Default() Config {
 		PrimaDir:          defaultPrimaDir(),
 		ServerBin:         "./llama-server",
 		CliBin:            "./llama-cli",
+		RpcBin:            "./rpc-server",
+		RpcPort:           50052,
 		ModelDir:          "download",
 		APIAddr:           "0.0.0.0:8977",
 		LLMPort:           8080,

@@ -72,7 +72,7 @@ func startNode(t *testing.T, ctx context.Context, name string, ramGB float64, co
 // supervisor takes its real exec path instead of dry-run.
 func writeFakeBinaries(t *testing.T, dir string) {
 	t.Helper()
-	for _, bin := range []string{"llama-server", "llama-cli"} {
+	for _, bin := range []string{"llama-server", "llama-cli", "rpc-server"} {
 		p := filepath.Join(dir, bin)
 		if err := os.WriteFile(p, []byte("#!/bin/sh\nsleep 60\n"), 0o755); err != nil {
 			t.Fatalf("write %s: %v", bin, err)

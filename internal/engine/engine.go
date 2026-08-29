@@ -1,8 +1,9 @@
-// Package engine provisions the prima.cpp inference binaries on demand, so a
+// Package engine provisions the llama.cpp inference binaries on demand, so a
 // plain shikA download ("one exe / one apk") can fetch the right engine for its
 // platform the first time the user presses Start — no compiler, no separate
-// install. Bundles are built by shikA's own release CI and attached to its
-// GitHub releases as shika-engine-<platform>.zip.
+// install. It pulls the official prebuilt binaries from llama.cpp's GitHub
+// releases (the CPU build for the platform), which is reliable and needs no
+// build step of our own.
 package engine
 
 import (
@@ -19,10 +20,10 @@ import (
 	"time"
 )
 
-// Repo is the GitHub repository whose releases carry the engine bundles.
-const Repo = "braymix/shiAssistabt"
+// Repo is the GitHub repository whose releases carry the prebuilt engine.
+const Repo = "ggml-org/llama.cpp"
 
-// Platform is the os-arch key used in bundle asset names, e.g. "windows-amd64".
+// Platform is the os-arch key used for diagnostics, e.g. "windows-amd64".
 func Platform() string {
 	return runtime.GOOS + "-" + runtime.GOARCH
 }
@@ -39,17 +40,40 @@ func exeExt() string {
 func ServerName() string { return "llama-server" + exeExt() }
 func CliName() string    { return "llama-cli" + exeExt() }
 
-// AssetName is the release asset expected for this platform.
-func AssetName() string { return "shika-engine-" + Platform() + ".zip" }
-
-// Installed reports whether both engine binaries already exist in dir.
+// Installed reports whether the engine binaries already exist in dir. The RPC
+// worker binary is bundled by llama.cpp too but the head only strictly needs the
+// server; we key "installed" on the server binary being present.
 func Installed(dir string) bool {
-	return isFile(filepath.Join(dir, ServerName())) && isFile(filepath.Join(dir, CliName()))
+	return isFile(filepath.Join(dir, ServerName()))
 }
 
-// LatestAssetURL asks the GitHub API for the newest release and returns the
-// download URL of this platform's engine bundle. resolver is injectable for
-// tests; pass nil for the real GitHub API.
+// osToken / archToken identify this platform inside llama.cpp asset names
+// (e.g. "llama-b6600-bin-win-cpu-x64.zip").
+func osToken() string {
+	switch runtime.GOOS {
+	case "windows":
+		return "win"
+	case "darwin":
+		return "macos"
+	case "linux":
+		return "ubuntu"
+	}
+	return runtime.GOOS
+}
+
+func archToken() string {
+	if runtime.GOARCH == "amd64" {
+		return "x64"
+	}
+	return runtime.GOARCH // arm64
+}
+
+// gpuTokens name accelerator builds we avoid (they need drivers we can't assume).
+var gpuTokens = []string{"cuda", "vulkan", "hip", "sycl", "kompute", "musa", "cann"}
+
+// LatestAssetURL asks the GitHub API for llama.cpp's newest release and returns
+// the download URL of the plain CPU build for this platform. resolver is
+// injectable for tests; pass nil for the real GitHub API.
 func LatestAssetURL(ctx context.Context, resolver func(context.Context) ([]byte, error)) (string, error) {
 	if resolver == nil {
 		resolver = fetchLatestRelease
@@ -68,13 +92,31 @@ func LatestAssetURL(ctx context.Context, resolver func(context.Context) ([]byte,
 	if err := json.Unmarshal(data, &rel); err != nil {
 		return "", err
 	}
-	want := AssetName()
+
+	oss, arch := osToken(), archToken()
 	for _, a := range rel.Assets {
-		if a.Name == want {
-			return a.URL, nil
+		n := strings.ToLower(a.Name)
+		if !strings.HasSuffix(n, ".zip") || !strings.Contains(n, "bin-") {
+			continue
+		}
+		if !strings.Contains(n, oss) || !strings.Contains(n, arch) {
+			continue
+		}
+		if containsAny(n, gpuTokens) {
+			continue // prefer the plain CPU build
+		}
+		return a.URL, nil
+	}
+	return "", fmt.Errorf("no CPU llama.cpp build for %s in release %s", Platform(), rel.TagName)
+}
+
+func containsAny(s string, subs []string) bool {
+	for _, sub := range subs {
+		if strings.Contains(s, sub) {
+			return true
 		}
 	}
-	return "", fmt.Errorf("no engine bundle %q in the latest release (%s) — this platform may not be built yet", want, rel.TagName)
+	return false
 }
 
 func fetchLatestRelease(ctx context.Context) ([]byte, error) {
@@ -159,8 +201,54 @@ func Ensure(ctx context.Context, dir, url string, progress func(done, total int6
 	if err := unzip(tmpName, dir); err != nil {
 		return err
 	}
+	// llama.cpp zips sometimes nest the binaries under a subfolder (e.g.
+	// build/bin/). Flatten so the launcher finds ./llama-server next to its libs.
 	if !Installed(dir) {
-		return fmt.Errorf("engine bundle did not contain %s and %s", ServerName(), CliName())
+		if err := flatten(dir); err != nil {
+			return err
+		}
+	}
+	if !Installed(dir) {
+		return fmt.Errorf("engine archive did not contain %s", ServerName())
+	}
+	return nil
+}
+
+// flatten locates ServerName anywhere under dir and, if it sits in a subfolder,
+// moves every file from that folder up to dir so the binary and its shared
+// libraries land together at the top level.
+func flatten(dir string) error {
+	var found string
+	_ = filepath.Walk(dir, func(p string, fi os.FileInfo, err error) error {
+		if err != nil || found != "" || fi.IsDir() {
+			return nil
+		}
+		if filepath.Base(p) == ServerName() {
+			found = p
+		}
+		return nil
+	})
+	if found == "" {
+		return nil
+	}
+	srcDir := filepath.Dir(found)
+	if srcDir == filepath.Clean(dir) {
+		return nil
+	}
+	entries, err := os.ReadDir(srcDir)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		from := filepath.Join(srcDir, e.Name())
+		to := filepath.Join(dir, e.Name())
+		if e.IsDir() {
+			continue // engine binaries and libs are files
+		}
+		_ = os.Remove(to)
+		if err := os.Rename(from, to); err != nil {
+			return err
+		}
 	}
 	return nil
 }

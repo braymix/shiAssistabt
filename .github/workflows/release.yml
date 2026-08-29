@@ -3,6 +3,12 @@ name: Release
 on:
   push:
     tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Existing release tag to (re)build desktop binaries for."
+        required: true
+        default: v0.1.0
 
 permissions:
   contents: write
@@ -20,8 +26,17 @@ jobs:
       - name: Test
         run: go test ./...
 
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.release }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Cross-compile release binaries
-        run: make cross VERSION="${GITHUB_REF_NAME}"
+        run: make cross VERSION="${{ steps.tag.outputs.tag }}"
 
       - name: Checksums
         run: cd bin && sha256sum shikad-* > SHA256SUMS
@@ -30,7 +45,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            bin/shikad-* bin/SHA256SUMS \
-            --title "shikA ${GITHUB_REF_NAME}" \
-            --generate-notes
+          set -eu
+          TAG="${{ steps.tag.outputs.tag }}"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "shikA $TAG" --generate-notes
+          gh release upload "$TAG" bin/shikad-* bin/SHA256SUMS --clobber

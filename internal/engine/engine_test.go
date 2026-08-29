@@ -63,32 +63,63 @@ func TestEnsureDownloadsAndExtracts(t *testing.T) {
 	}
 }
 
-func TestLatestAssetURLPicksPlatform(t *testing.T) {
-	want := AssetName()
-	body := `{
-      "tag_name": "v0.2.0",
-      "assets": [
-        {"name": "other.zip", "browser_download_url": "http://x/other.zip"},
-        {"name": "` + want + `", "browser_download_url": "http://x/` + want + `"}
-      ]
-    }`
+// releaseJSON mimics llama.cpp's release assets for every platform, so the
+// resolver must pick the plain CPU build matching THIS runner's os/arch.
+const releaseJSON = `{
+  "tag_name": "b6600",
+  "assets": [
+    {"name": "llama-b6600-bin-win-cpu-x64.zip",        "browser_download_url": "http://x/win-cpu-x64"},
+    {"name": "llama-b6600-bin-win-cuda-12.4-x64.zip",  "browser_download_url": "http://x/win-cuda"},
+    {"name": "llama-b6600-bin-macos-arm64.zip",        "browser_download_url": "http://x/macos-arm64"},
+    {"name": "llama-b6600-bin-macos-x64.zip",          "browser_download_url": "http://x/macos-x64"},
+    {"name": "llama-b6600-bin-ubuntu-x64.zip",         "browser_download_url": "http://x/ubuntu-x64"},
+    {"name": "llama-b6600-bin-ubuntu-vulkan-x64.zip",  "browser_download_url": "http://x/ubuntu-vulkan"}
+  ]
+}`
+
+func TestLatestAssetURLPicksPlatformCPUBuild(t *testing.T) {
 	url, err := LatestAssetURL(context.Background(), func(context.Context) ([]byte, error) {
-		return []byte(body), nil
+		return []byte(releaseJSON), nil
 	})
-	if err != nil {
-		t.Fatal(err)
+	// Only assert on the platforms the CI actually runs (linux/darwin); the
+	// resolver returns an error for anything not in the fixture.
+	switch osToken() + "-" + archToken() {
+	case "ubuntu-x64":
+		if err != nil || url != "http://x/ubuntu-x64" {
+			t.Fatalf("linux amd64: url=%q err=%v, want the CPU ubuntu x64 build", url, err)
+		}
+	case "macos-arm64":
+		if err != nil || url != "http://x/macos-arm64" {
+			t.Fatalf("darwin arm64: url=%q err=%v", url, err)
+		}
+	case "macos-x64":
+		if err != nil || url != "http://x/macos-x64" {
+			t.Fatalf("darwin amd64: url=%q err=%v", url, err)
+		}
+	default:
+		// Other platforms may legitimately have no fixture match.
 	}
-	if url != "http://x/"+want {
-		t.Fatalf("url = %q, want the platform asset", url)
+	// Whatever platform, it must never pick a GPU build.
+	if err == nil && (contains(url, "cuda") || contains(url, "vulkan")) {
+		t.Fatalf("picked a GPU build: %q", url)
 	}
 }
 
-func TestLatestAssetURLMissingPlatform(t *testing.T) {
-	body := `{"tag_name":"v0.2.0","assets":[{"name":"nope.zip","browser_download_url":"http://x/nope"}]}`
-	_, err := LatestAssetURL(context.Background(), func(context.Context) ([]byte, error) {
+func TestLatestAssetURLNoMatch(t *testing.T) {
+	body := `{"tag_name":"b1","assets":[{"name":"llama-b1-bin-freebsd-x64.zip","browser_download_url":"http://x/bsd"}]}`
+	if _, err := LatestAssetURL(context.Background(), func(context.Context) ([]byte, error) {
 		return []byte(body), nil
-	})
-	if err == nil {
-		t.Fatal("expected an error when this platform's bundle is absent")
+	}); err == nil {
+		t.Fatal("expected an error when no asset matches this platform")
 	}
+}
+
+func contains(s, sub string) bool { return len(s) >= len(sub) && (indexOf(s, sub) >= 0) }
+func indexOf(s, sub string) int {
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return i
+		}
+	}
+	return -1
 }

@@ -61,7 +61,7 @@ func TestBuildIsDeterministic(t *testing.T) {
 	}
 }
 
-func TestBuildRingClosesAndCommandsAreRoleCorrect(t *testing.T) {
+func TestBuildRolesAndRPC(t *testing.T) {
 	cfg := config.Default()
 	peers := []discovery.Peer{
 		peer("a", "big", "192.168.1.2:8977", 32, 16),
@@ -69,17 +69,36 @@ func TestBuildRingClosesAndCommandsAreRoleCorrect(t *testing.T) {
 	}
 	plan, _ := Build(peers, cfg)
 
-	// ring: last member's next must be the head's IP
-	last := plan.Members[len(plan.Members)-1]
-	if last.NextIP != plan.HeadIP {
-		t.Fatalf("ring not closed: last.next=%q head=%q", last.NextIP, plan.HeadIP)
+	// head runs llama-server and offloads to the worker via --rpc
+	head := plan.Members[0]
+	if head.Command[0] != "./llama-server" {
+		t.Fatalf("head cmd = %v", head.Command)
 	}
-	// head runs llama-server, worker runs llama-cli
-	if plan.Members[0].Command[0] != "./llama-server" {
-		t.Fatalf("head cmd = %v", plan.Members[0].Command)
+	if !containsArg(head.Command, "--rpc") {
+		t.Fatalf("head should offload to workers via --rpc: %v", head.Command)
 	}
-	if plan.Members[1].Command[0] != "./llama-cli" {
-		t.Fatalf("worker cmd = %v", plan.Members[1].Command)
+	if !containsArg(head.Command, "192.168.1.3:50052") {
+		t.Fatalf("head --rpc list should include the worker rpc endpoint: %v", head.Command)
+	}
+	// worker runs rpc-server (no model of its own)
+	worker := plan.Members[1]
+	if worker.Command[0] != "./rpc-server" {
+		t.Fatalf("worker cmd = %v", worker.Command)
+	}
+	if containsArg(worker.Command, "-m") {
+		t.Fatalf("worker should not load a model: %v", worker.Command)
+	}
+}
+
+func TestBuildSingleNodeIsPlainServer(t *testing.T) {
+	cfg := config.Default()
+	plan, _ := Build([]discovery.Peer{peer("solo", "solo", "10.0.0.1:8977", 8, 4)}, cfg)
+	head := plan.Members[0]
+	if head.Command[0] != "./llama-server" {
+		t.Fatalf("single-node head cmd = %v", head.Command)
+	}
+	if containsArg(head.Command, "--rpc") {
+		t.Fatalf("single node must not use --rpc: %v", head.Command)
 	}
 }
 
@@ -103,10 +122,9 @@ func TestBuildUsesHeadAdvertisedModel(t *testing.T) {
 	if plan.Model != "llama3.1-8b.gguf" {
 		t.Fatalf("plan.Model = %q, want the head's model", plan.Model)
 	}
-	for _, m := range plan.Members {
-		if !containsArg(m.Command, "download/llama3.1-8b.gguf") {
-			t.Fatalf("member %s command uses wrong model: %v", m.Info.Name, m.Command)
-		}
+	// Only the head loads the model (llama.cpp RPC streams layers to workers).
+	if !containsArg(plan.Members[0].Command, "download/llama3.1-8b.gguf") {
+		t.Fatalf("head command should load the head's model: %v", plan.Members[0].Command)
 	}
 }
 
@@ -123,7 +141,7 @@ func TestBuildHonorsAndroidEnginePaths(t *testing.T) {
 	// Android points the engine at bundled native libs and a writable model dir.
 	cfg := config.Default()
 	cfg.ServerBin = "./libllama-server.so"
-	cfg.CliBin = "./libllama-cli.so"
+	cfg.RpcBin = "./librpc-server.so"
 	cfg.ModelDir = "/data/data/com.shika.app/files/models"
 
 	peers := []discovery.Peer{
@@ -137,8 +155,8 @@ func TestBuildHonorsAndroidEnginePaths(t *testing.T) {
 		t.Fatalf("head bin = %q, want the bundled server lib", head.Command[0])
 	}
 	worker := plan.Members[1]
-	if worker.Command[0] != "./libllama-cli.so" {
-		t.Fatalf("worker bin = %q, want the bundled cli lib", worker.Command[0])
+	if worker.Command[0] != "./librpc-server.so" {
+		t.Fatalf("worker bin = %q, want the bundled rpc lib", worker.Command[0])
 	}
 	want := "/data/data/com.shika.app/files/models/" + plan.Model
 	if !containsArg(head.Command, want) {
