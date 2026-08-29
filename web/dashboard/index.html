@@ -73,6 +73,7 @@
     <a class="linkbtn" href="/models.html">Models →</a>
     <span class="pill" id="autostate">autostart: —</span>
     <span class="pill" id="worldpill">devices: —</span>
+    <span class="pill" id="enginepill" style="display:none">engine: —</span>
   </div>
 
   <div class="llm" id="llmBox" style="display:none">
@@ -150,6 +151,19 @@ async function refresh(){
     const [state, planResp] = await Promise.all([ api('/api/state'), api('/api/plan') ]);
     selfId = state.node.id;
     $('autostate').textContent = 'autostart: ' + (state.autostart ? 'on' : 'off');
+
+    const eng = state.engine;
+    if(eng){
+      const p = $('enginepill');
+      p.style.display = '';
+      if(eng.status === 'ready'){ p.textContent = 'engine: ready'; }
+      else if(eng.status === 'downloading'){
+        const pct = eng.total>0 ? Math.round(100*eng.done/eng.total) : 0;
+        p.textContent = 'engine: downloading ' + pct + '%';
+      }
+      else if(eng.status === 'error'){ p.textContent = 'engine: error'; p.title = eng.error||''; }
+      else { p.textContent = 'engine: not installed (press Start)'; }
+    }
 
     const plan = planResp.plan;
     const members = (planResp.ok && plan.members) ? plan.members : [];

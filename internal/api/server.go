@@ -29,6 +29,9 @@ type Server struct {
 
 	mu        sync.RWMutex
 	autostart bool
+
+	engMu sync.Mutex
+	eng   engineStatus
 }
 
 // New builds a Server. autostart reflects cfg.AutoStart initially.
@@ -164,6 +167,7 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 		"state":     s.sup.State(),
 		"autostart": s.AutoStart(),
 		"node":      s.reg.Self(),
+		"engine":    s.EngineStatus(),
 	})
 }
 
@@ -175,6 +179,9 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	s.autostart = true
 	s.mu.Unlock()
+	// Fetch the engine for this platform if it isn't here yet; the reconcile
+	// loop launches prima.cpp automatically once the binaries land.
+	s.EnsureEngine()
 	if plan, ok := s.Plan(); ok {
 		s.sup.Apply(context.Background(), plan)
 	}
