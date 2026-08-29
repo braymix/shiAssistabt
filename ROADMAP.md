@@ -75,9 +75,10 @@ identities:
 - [x] Pick, download and verify (SHA256) GGUF models from the dashboard
 - [x] Curated list (including an uncensored option) with size/RAM guidance
 - [x] Show whether a model fits the current mesh's combined memory
+- [x] Per-cluster model selection: the head advertises the chosen model and
+      every node builds its command for that file and auto-downloads it, so the
+      whole mesh converges on one model
 - [ ] Pin real SHA256s for every catalog entry (some ship unverified for now)
-- [ ] Per-cluster model selection + push a chosen model to every node so all
-      devices hold the same file (today each node downloads its own)
 
 ## Later / ideas
 

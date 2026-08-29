@@ -88,3 +88,42 @@ func TestBuildEmpty(t *testing.T) {
 		t.Fatal("empty peer set should not produce a plan")
 	}
 }
+
+func TestBuildUsesHeadAdvertisedModel(t *testing.T) {
+	cfg := config.Default() // default model differs from what the head advertises
+	head := peer("h", "head", "192.168.1.2:8977", 32, 16)
+	head.Model = "llama3.1-8b.gguf" // head's cluster-wide choice
+	worker := peer("w", "worker", "192.168.1.3:8977", 8, 4)
+	// worker still advertises the default; the head's choice must win for all.
+
+	plan, ok := Build([]discovery.Peer{worker, head}, cfg)
+	if !ok {
+		t.Fatal("expected ok plan")
+	}
+	if plan.Model != "llama3.1-8b.gguf" {
+		t.Fatalf("plan.Model = %q, want the head's model", plan.Model)
+	}
+	for _, m := range plan.Members {
+		if !containsArg(m.Command, "download/llama3.1-8b.gguf") {
+			t.Fatalf("member %s command uses wrong model: %v", m.Info.Name, m.Command)
+		}
+	}
+}
+
+func TestBuildFallsBackToConfigModel(t *testing.T) {
+	cfg := config.Default()
+	// No peer advertises a model, so every command uses the configured default.
+	plan, _ := Build([]discovery.Peer{peer("a", "a", "10.0.0.1:8977", 8, 4)}, cfg)
+	if plan.Model != cfg.Model {
+		t.Fatalf("plan.Model = %q, want config default %q", plan.Model, cfg.Model)
+	}
+}
+
+func containsArg(argv []string, want string) bool {
+	for _, a := range argv {
+		if a == want {
+			return true
+		}
+	}
+	return false
+}

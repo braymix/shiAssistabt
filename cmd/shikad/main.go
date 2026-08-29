@@ -102,6 +102,7 @@ func main() {
 	}
 
 	self := node.Detect(cfg.NodeName, control, cfg.LLMPort)
+	self.Model = cfg.Model // advertised; the head's choice becomes the cluster's
 	log.Printf("this device: %s (%s/%s, %.1f GB RAM, %d cores, gpu=%v) id=%s",
 		self.Name, self.OS, self.Arch, self.RAMGB(), self.Cores, self.HasGPU, self.ID)
 
@@ -178,6 +179,9 @@ func reconcile(ctx context.Context, srv *api.Server, sup *supervisor.Supervisor)
 		case <-ctx.Done():
 			return
 		case <-t.C:
+			// Converge on the mesh's chosen model whether or not we autostart,
+			// so the file is ready by the time the cluster launches.
+			srv.EnsureModel()
 			if !srv.AutoStart() {
 				continue
 			}
