@@ -2,6 +2,9 @@
   "node_name": "living-room-mac",
   "model": "qwen2.5-3b-instruct-q4_k_m.gguf",
   "prima_dir": "/Users/you/prima.cpp",
+  "server_bin": "./llama-server",
+  "cli_bin": "./llama-cli",
+  "model_dir": "download",
   "api_addr": "0.0.0.0:8977",
   "llm_port": 8080,
 

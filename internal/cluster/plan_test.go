@@ -119,6 +119,33 @@ func TestBuildFallsBackToConfigModel(t *testing.T) {
 	}
 }
 
+func TestBuildHonorsAndroidEnginePaths(t *testing.T) {
+	// Android points the engine at bundled native libs and a writable model dir.
+	cfg := config.Default()
+	cfg.ServerBin = "./libllama-server.so"
+	cfg.CliBin = "./libllama-cli.so"
+	cfg.ModelDir = "/data/data/com.shika.app/files/models"
+
+	peers := []discovery.Peer{
+		peer("h", "phoneA", "192.168.43.1:8977", 8, 8),
+		peer("w", "phoneB", "192.168.43.20:8977", 6, 8),
+	}
+	plan, _ := Build(peers, cfg)
+
+	head := plan.Members[0]
+	if head.Command[0] != "./libllama-server.so" {
+		t.Fatalf("head bin = %q, want the bundled server lib", head.Command[0])
+	}
+	worker := plan.Members[1]
+	if worker.Command[0] != "./libllama-cli.so" {
+		t.Fatalf("worker bin = %q, want the bundled cli lib", worker.Command[0])
+	}
+	want := "/data/data/com.shika.app/files/models/" + plan.Model
+	if !containsArg(head.Command, want) {
+		t.Fatalf("head -m path not absolute writable dir: %v", head.Command)
+	}
+}
+
 func containsArg(argv []string, want string) bool {
 	for _, a := range argv {
 		if a == want {

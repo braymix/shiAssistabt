@@ -37,7 +37,7 @@ func New(cfg config.Config, reg *discovery.Registry, sup *supervisor.Supervisor)
 		cfg:       cfg,
 		reg:       reg,
 		sup:       sup,
-		mdl:       models.NewManager(cfg.PrimaDir),
+		mdl:       models.NewManager(cfg.ResolvedModelDir()),
 		autostart: cfg.AutoStart,
 	}
 }

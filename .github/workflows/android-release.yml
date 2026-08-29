@@ -54,6 +54,28 @@ jobs:
       - name: Build native orchestrator binary (libshikad.so)
         run: make android VERSION="${GITHUB_REF_NAME:-dev}"
 
+      # Best-effort: cross-compile the prima.cpp inference engine for arm64 and
+      # bundle it, so the APK does real inference. If it fails, the APK still
+      # ships (phones run in dry-run until an engine build lands).
+      - name: Install NDK
+        run: |
+          set -eu
+          yes | sdkmanager --install "ndk;26.3.11579264" >/dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.3.11579264" >> "$GITHUB_ENV"
+
+      - name: Build & bundle prima.cpp engine (best-effort)
+        id: engine
+        continue-on-error: true
+        run: sh scripts/build-prima-android.sh android/app/src/main/jniLibs/arm64-v8a
+
+      - name: Report engine status
+        run: |
+          if [ "${{ steps.engine.outcome }}" = "success" ]; then
+            echo "::notice::Inference engine bundled — phones do real inference."
+          else
+            echo "::warning::Engine cross-compile failed; APK ships orchestrator-only (dry-run on phones)."
+          fi
+
       - name: Build (and sign) APK
         working-directory: android
         env:

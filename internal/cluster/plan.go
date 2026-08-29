@@ -4,6 +4,7 @@ package cluster
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 
 	"github.com/braymix/shika/internal/config"
@@ -91,7 +92,7 @@ func Build(peers []discovery.Peer, cfg config.Config) (Plan, bool) {
 // buildCommand assembles the prima.cpp argv for a member. The head runs
 // llama-server (persistent OpenAI API + web UI); workers run llama-cli.
 func buildCommand(m Member, headIP string, world int, modelFile string, cfg config.Config) []string {
-	model := "download/" + modelFile
+	model := modelPath(cfg.ModelDir, modelFile)
 	common := []string{
 		"--world", itoa(world),
 		"--rank", itoa(m.Rank),
@@ -103,14 +104,27 @@ func buildCommand(m Member, headIP string, world int, modelFile string, cfg conf
 	}
 	if m.IsHead {
 		argv := []string{
-			"./llama-server", "-m", model,
+			cfg.ServerBin, "-m", model,
 			"--host", "0.0.0.0", "--port", itoa(m.Info.LLMPort),
 			"-c", "2048",
 		}
 		return append(argv, common...)
 	}
-	argv := []string{"./llama-cli", "-m", model}
+	argv := []string{cfg.CliBin, "-m", model}
 	return append(argv, common...)
+}
+
+// modelPath resolves the -m argument. An absolute ModelDir is used verbatim
+// (Android's writable storage); a relative one keeps prima.cpp's cwd-relative
+// "download/<file>" form.
+func modelPath(modelDir, file string) string {
+	if modelDir == "" {
+		modelDir = "download"
+	}
+	if filepath.IsAbs(modelDir) {
+		return filepath.Join(modelDir, file)
+	}
+	return modelDir + "/" + file
 }
 
 // hostOf extracts the host part of a host:port string. If there is no port it

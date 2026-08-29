@@ -6,7 +6,7 @@ BINDIR := bin
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo 0.1.0-dev)
 LDFLAGS := -X main.version=$(VERSION)
 
-.PHONY: all build run test check fmt vet clean cross dist android prima
+.PHONY: all build run test check fmt vet clean cross dist android prima prima-android
 
 all: build
 
@@ -60,3 +60,8 @@ android:
 # Fetch & build prima.cpp (the data plane) into ~/prima.cpp.
 prima:
 	sh scripts/bootstrap-prima.sh
+
+# Cross-compile the prima.cpp engine for Android arm64 into the APK's jniLibs.
+# Needs ANDROID_NDK_HOME set. Bundled by the release CI automatically.
+prima-android:
+	sh scripts/build-prima-android.sh $(ANDROID_JNI)

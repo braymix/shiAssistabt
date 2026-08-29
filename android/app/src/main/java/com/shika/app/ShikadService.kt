@@ -41,19 +41,40 @@ class ShikadService : Service() {
 
     private fun startShikad() {
         if (running) return
-        val bin = File(applicationInfo.nativeLibraryDir, "libshikad.so")
+        val libDir = applicationInfo.nativeLibraryDir
+        val bin = File(libDir, "libshikad.so")
         if (!bin.canExecute()) {
             Log.e(TAG, "shikad binary not found or not executable at ${bin.absolutePath}")
             stopSelf()
             return
         }
         val name = Build.MODEL ?: "android"
+
+        // Models are downloaded to writable app storage; the prima.cpp engine
+        // binaries are bundled next to shikad in the read-only nativeLibraryDir
+        // (Android only lets us exec from there). If the engine libs aren't
+        // present in this build, shikad simply stays in dry-run.
+        val modelsDir = File(filesDir, "models").apply { mkdirs() }
+        val cmd = mutableListOf(
+            bin.absolutePath,
+            "-name", name,
+            "-autostart",
+            "-prima-dir", libDir,
+            "-model-dir", modelsDir.absolutePath,
+        )
+        if (File(libDir, "libllama-server.so").canExecute()) {
+            cmd += listOf(
+                "-server-bin", "./libllama-server.so",
+                "-cli-bin", "./libllama-cli.so",
+            )
+        }
+
         Thread {
             running = true
             try {
-                val pb = ProcessBuilder(bin.absolutePath, "-name", name)
+                val pb = ProcessBuilder(cmd)
                 pb.redirectErrorStream(true)
-                pb.directory(filesDir) // writable cwd for any state
+                pb.directory(libDir) // cwd so "./libllama-*.so" resolve here
                 proc = pb.start()
                 proc?.inputStream?.bufferedReader()?.forEachLine { Log.i(TAG, it) }
                 proc?.waitFor()

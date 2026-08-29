@@ -13,6 +13,21 @@ the read-only, **executable** `nativeLibraryDir`. The foreground service execs i
 there, holds a CPU wakelock and a Wi-Fi **multicast lock** (so LAN
 auto-discovery works), and a WebView shows the dashboard from `localhost:8977`.
 
+### Inference engine (real answers vs. dry-run)
+
+The orchestrator (discovery, mesh, dashboard, chat UI) always works. Actually
+serving a model needs the **prima.cpp** engine, which the app launches the same
+way: bundled as `libllama-server.so` / `libllama-cli.so` in `jniLibs`, run from
+`nativeLibraryDir`, with models stored in writable app storage
+(`filesDir/models`). The service passes `shikad` the matching
+`-prima-dir` / `-server-bin` / `-cli-bin` / `-model-dir` flags automatically.
+
+The release CI cross-compiles prima.cpp for arm64 (NDK) and bundles it
+**best-effort**: if that build succeeds the APK does real inference; if it
+fails the APK still ships and phones run in **dry-run** (you see the mesh and
+the exact command it would run, but no tokens) until an engine build lands. Two
+phones on a hotspot then pool memory to run a model neither could alone.
+
 ## Build
 
 You need the Go toolchain and the Android SDK (Android Studio, or command-line

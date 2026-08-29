@@ -4,6 +4,7 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -17,8 +18,22 @@ type Config struct {
 	// Model is the GGUF filename every node must have under PrimaDir/download.
 	Model string `json:"model"`
 
-	// PrimaDir is where prima.cpp is checked out and built on this device.
+	// PrimaDir is where prima.cpp is checked out and built on this device. It is
+	// the working directory the engine binaries run from.
 	PrimaDir string `json:"prima_dir"`
+
+	// ServerBin / CliBin are the executables the head and workers launch,
+	// relative to PrimaDir (or absolute). Defaults suit a desktop prima.cpp
+	// build; on Android the app points these at the bundled native libraries in
+	// its nativeLibraryDir (e.g. "./libllama-server.so").
+	ServerBin string `json:"server_bin"`
+	CliBin    string `json:"cli_bin"`
+
+	// ModelDir is where GGUF files live. Relative paths are resolved against
+	// PrimaDir (prima.cpp's own layout); an absolute path is used as-is, which
+	// Android needs since it must store models in writable app storage rather
+	// than next to the read-only bundled binaries.
+	ModelDir string `json:"model_dir"`
 
 	// APIAddr is where the local control API + dashboard is served.
 	APIAddr string `json:"api_addr"`
@@ -65,6 +80,9 @@ func Default() Config {
 		NodeName:          host,
 		Model:             "qwen2.5-3b-instruct-q4_k_m.gguf",
 		PrimaDir:          defaultPrimaDir(),
+		ServerBin:         "./llama-server",
+		CliBin:            "./llama-cli",
+		ModelDir:          "download",
 		APIAddr:           "0.0.0.0:8977",
 		LLMPort:           8080,
 		MulticastAddr:     "239.42.42.42:9977",
@@ -77,6 +95,16 @@ func Default() Config {
 		SignalPort:        10000,
 		AutoStart:         false,
 	}
+}
+
+// ResolvedModelDir returns the absolute directory GGUF files live in: ModelDir
+// as-is when absolute, otherwise joined onto PrimaDir. Both the download manager
+// and the launched engine must agree on this location.
+func (c Config) ResolvedModelDir() string {
+	if filepath.IsAbs(c.ModelDir) {
+		return c.ModelDir
+	}
+	return filepath.Join(c.PrimaDir, c.ModelDir)
 }
 
 func defaultPrimaDir() string {

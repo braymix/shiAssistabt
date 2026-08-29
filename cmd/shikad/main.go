@@ -42,6 +42,10 @@ func main() {
 		autostart   = flag.Bool("autostart", false, "launch prima.cpp automatically once a plan is reached")
 		noTailscale = flag.Bool("no-tailscale", false, "disable Tailscale peer auto-discovery")
 		preferTS    = flag.Bool("prefer-tailscale-ip", false, "advertise the tailnet IP as this node's address")
+		primaDir    = flag.String("prima-dir", "", "directory the engine binaries run from")
+		serverBin   = flag.String("server-bin", "", "head engine executable (relative to prima-dir or absolute)")
+		cliBin      = flag.String("cli-bin", "", "worker engine executable (relative to prima-dir or absolute)")
+		modelDir    = flag.String("model-dir", "", "directory GGUF models are stored in (absolute for Android)")
 		showVersion = flag.Bool("version", false, "print version and exit")
 	)
 	flag.Parse()
@@ -70,6 +74,18 @@ func main() {
 	}
 	if *preferTS {
 		cfg.PreferTailscaleIP = true
+	}
+	if *primaDir != "" {
+		cfg.PrimaDir = *primaDir
+	}
+	if *serverBin != "" {
+		cfg.ServerBin = *serverBin
+	}
+	if *cliBin != "" {
+		cfg.CliBin = *cliBin
+	}
+	if *modelDir != "" {
+		cfg.ModelDir = *modelDir
 	}
 
 	// cfg.APIAddr may be a wildcard like "0.0.0.0:8977", which is useless to

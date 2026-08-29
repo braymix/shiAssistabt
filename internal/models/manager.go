@@ -24,22 +24,24 @@ type Progress struct {
 	Error     string `json:"error,omitempty"`
 }
 
-// Manager downloads and tracks catalog models under <primaDir>/download.
+// Manager downloads and tracks catalog models under a fixed directory.
 type Manager struct {
-	primaDir string
+	dir string
 
 	mu       sync.Mutex
 	progress map[string]*Progress
 }
 
-// NewManager creates a model manager rooted at a prima.cpp checkout.
-func NewManager(primaDir string) *Manager {
-	return &Manager{primaDir: primaDir, progress: make(map[string]*Progress)}
+// NewManager creates a model manager that stores GGUF files in dir (an absolute
+// path — use config.ResolvedModelDir). The engine is launched with a matching
+// -m path so downloads land exactly where prima.cpp looks for them.
+func NewManager(dir string) *Manager {
+	return &Manager{dir: dir, progress: make(map[string]*Progress)}
 }
 
-// DownloadDir is where GGUF files live (prima.cpp expects them under download/).
+// DownloadDir is where GGUF files live.
 func (mgr *Manager) DownloadDir() string {
-	return filepath.Join(mgr.primaDir, "download")
+	return mgr.dir
 }
 
 // Installed reports whether the model's file is present on disk.
