@@ -58,7 +58,9 @@ func Catalog() []Model {
 			ID:        "qwen2.5-7b-instruct-q4km",
 			Name:      "Qwen2.5 7B Instruct (Q4_K_M)",
 			File:      "qwen2.5-7b-instruct-q4_k_m.gguf",
-			URL:       "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m.gguf",
+			// Qwen's own repo ships this quant split across shards; bartowski's
+			// is a single file, which shikA's one-file downloader needs.
+			URL:       "https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF/resolve/main/Qwen2.5-7B-Instruct-Q4_K_M.gguf",
 			SizeBytes: 5 * gb,
 			MinRAMGB:  8,
 			Notes:     "Noticeably stronger; wants a couple of decent devices.",
